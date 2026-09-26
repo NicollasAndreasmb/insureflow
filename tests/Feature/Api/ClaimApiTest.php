@@ -116,7 +116,7 @@ class ClaimApiTest extends TestCase
 
         $this->postJson('/api/claims', $this->payload($policy, ['occurred_on' => today()->addDay()->toDateString()]))
             ->assertUnprocessable()
-            ->assertJsonValidationErrors('occurred_on');
+            ->assertJsonPath('errors.occurred_on.0', 'O campo data de ocorrência deve ser uma data igual ou anterior a hoje.');
 
         $this->postJson('/api/claims', $this->payload($policy, ['reported_on' => today()->subDays(5)->toDateString()]))
             ->assertUnprocessable()

@@ -75,6 +75,17 @@ return [
     'cpf' => 'O CPF informado é inválido.',
     'cnpj' => 'O CNPJ informado é inválido.',
 
+    /*
+     * Valores exibidos no lugar de parâmetros das regras. Sem isso, regras como
+     * before_or_equal:today exibiriam a palavra "today" na mensagem.
+     */
+    'values' => [
+        'birth_date' => ['today' => 'hoje'],
+        'occurred_on' => ['today' => 'hoje'],
+        'reported_on' => ['today' => 'hoje'],
+        'paid_on' => ['today' => 'hoje'],
+    ],
+
     'attributes' => [
         'additional_premium' => 'prêmio adicional',
         'approved_amount' => 'valor aprovado',
