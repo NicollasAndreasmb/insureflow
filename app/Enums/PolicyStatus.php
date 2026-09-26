@@ -59,4 +59,12 @@ enum PolicyStatus: string
     {
         return $this->allowedTransitions() === [];
     }
+
+    /**
+     * @return list<self>
+     */
+    public static function nonFinal(): array
+    {
+        return array_values(array_filter(self::cases(), fn (self $status) => ! $status->isFinal()));
+    }
 }

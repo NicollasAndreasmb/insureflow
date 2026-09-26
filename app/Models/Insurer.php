@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasActivityLog;
+use App\Models\Concerns\HasPolicies;
 use Database\Factories\InsurerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
@@ -18,7 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Insurer extends Model
 {
     /** @use HasFactory<InsurerFactory> */
-    use HasActivityLog, HasFactory, SoftDeletes;
+    use HasActivityLog, HasFactory, HasPolicies, SoftDeletes;
 
     protected $attributes = [
         'is_active' => true,
@@ -31,8 +33,17 @@ class Insurer extends Model
         ];
     }
 
-    public function policies(): HasMany
+    #[Scope]
+    protected function filter(Builder $query, array $filters): void
     {
-        return $this->hasMany(Policy::class);
+        $query
+            ->when($filters['search'] ?? null, function (Builder $query, string $term) {
+                $digits = preg_replace('/\D/', '', $term);
+
+                $query->where(fn (Builder $query) => $query
+                    ->whereAny(['trade_name', 'legal_name'], 'ilike', "%{$term}%")
+                    ->when($digits !== '', fn (Builder $query) => $query->orWhere('cnpj', 'like', "%{$digits}%")));
+            })
+            ->when(isset($filters['is_active']), fn (Builder $query) => $query->where('is_active', filter_var($filters['is_active'], FILTER_VALIDATE_BOOLEAN)));
     }
 }
