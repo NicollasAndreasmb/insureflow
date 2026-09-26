@@ -2,24 +2,37 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
+/**
+ * Popula o ambiente de desenvolvimento com dados fictícios e coerentes.
+ *
+ * A ordem respeita as dependências entre as tabelas. As datas são relativas ao
+ * dia da execução, para que o dashboard sempre tenha vencimentos próximos,
+ * parcelas atrasadas e sinistros recentes. O Faker recebe uma semente fixa
+ * para que duas execuções no mesmo dia gerem os mesmos dados.
+ */
 class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
+        if (app()->isProduction()) {
+            throw new RuntimeException('Development seeders must not run in production.');
+        }
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        fake()->seed(20260926);
+
+        $this->call([
+            UserSeeder::class,
+            InsuranceProductSeeder::class,
+            InsurerSeeder::class,
+            ClientSeeder::class,
+            PolicySeeder::class,
+            ClaimSeeder::class,
         ]);
     }
 }
