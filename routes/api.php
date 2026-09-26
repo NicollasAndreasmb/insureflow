@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ClaimController;
+use App\Http\Controllers\Api\ClaimStatusController;
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\CoverageController;
 use App\Http\Controllers\Api\HealthCheckController;
@@ -30,4 +32,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/installments', [InstallmentController::class, 'index'])->name('installments.index');
     Route::get('/installments/{installment}', [InstallmentController::class, 'show'])->name('installments.show');
     Route::post('/installments/{installment}/payment', [InstallmentController::class, 'pay'])->name('installments.pay');
+
+    Route::apiResource('claims', ClaimController::class);
+    Route::patch('/claims/{claim}/status', ClaimStatusController::class)->name('claims.status');
 });

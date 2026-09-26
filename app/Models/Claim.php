@@ -6,6 +6,8 @@ use App\Enums\ClaimStatus;
 use App\Models\Concerns\HasActivityLog;
 use Database\Factories\ClaimFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -57,5 +59,26 @@ class Claim extends Model
     public function statusHistory(): HasMany
     {
         return $this->hasMany(ClaimStatusHistory::class)->oldest('created_at')->oldest('id');
+    }
+
+    #[Scope]
+    protected function filter(Builder $query, array $filters): void
+    {
+        $query
+            ->when($filters['search'] ?? null, fn (Builder $query, string $term) => $query->where(
+                fn (Builder $query) => $query
+                    ->where('protocol', 'ilike', "%{$term}%")
+                    ->orWhereHas('policy', fn (Builder $query) => $query
+                        ->where('number', 'ilike', "%{$term}%")
+                        ->orWhereHas('client', fn (Builder $query) => $query->where('name', 'ilike', "%{$term}%"))),
+            ))
+            ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status))
+            ->when(filter_var($filters['open'] ?? false, FILTER_VALIDATE_BOOLEAN), fn (Builder $query) => $query->whereIn('status', ClaimStatus::nonFinal()))
+            ->when($filters['policy_id'] ?? null, fn (Builder $query, int|string $id) => $query->where('policy_id', $id))
+            ->when($filters['client_id'] ?? null, fn (Builder $query, int|string $id) => $query->whereHas(
+                'policy', fn (Builder $query) => $query->where('client_id', $id),
+            ))
+            ->when($filters['occurred_from'] ?? null, fn (Builder $query, string $date) => $query->where('occurred_on', '>=', $date))
+            ->when($filters['occurred_until'] ?? null, fn (Builder $query, string $date) => $query->where('occurred_on', '<=', $date));
     }
 }

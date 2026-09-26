@@ -59,4 +59,14 @@ enum ClaimStatus: string
     {
         return $this->allowedTransitions() === [];
     }
+
+    /**
+     * Sinistros ainda não encerrados: são os "sinistros abertos" do dashboard.
+     *
+     * @return list<self>
+     */
+    public static function nonFinal(): array
+    {
+        return array_values(array_filter(self::cases(), fn (self $status) => ! $status->isFinal()));
+    }
 }
