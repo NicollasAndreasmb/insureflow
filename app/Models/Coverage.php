@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasActivityLog;
 use Database\Factories\CoverageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Coverage extends Model
 {
     /** @use HasFactory<CoverageFactory> */
-    use HasFactory;
+    use HasActivityLog, HasFactory;
 
     protected $attributes = [
         'additional_premium' => '0.00',

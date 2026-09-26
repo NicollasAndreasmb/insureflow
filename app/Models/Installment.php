@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\InstallmentStatus;
+use App\Models\Concerns\HasActivityLog;
 use Database\Factories\InstallmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -22,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Installment extends Model
 {
     /** @use HasFactory<InstallmentFactory> */
-    use HasFactory;
+    use HasActivityLog, HasFactory;
 
     protected $attributes = [
         'status' => 'pending',
