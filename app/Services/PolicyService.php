@@ -149,13 +149,14 @@ class PolicyService
 
     private function ensureStatusFitsTerm(Policy $policy, PolicyStatus $status): void
     {
-        if ($status === PolicyStatus::Active && $policy->ends_on->lt(today())) {
-            throw new BusinessRuleException('Uma apólice com a vigência encerrada não pode estar ativa.', 'ends_on');
+        if ($policy->termAllows($status)) {
+            return;
         }
 
-        if ($status === PolicyStatus::Expired && $policy->ends_on->gte(today())) {
-            throw new BusinessRuleException('A apólice só pode ser expirada após o fim da vigência.', 'status');
-        }
+        throw match ($status) {
+            PolicyStatus::Active => new BusinessRuleException('Uma apólice com a vigência encerrada não pode estar ativa.', 'ends_on'),
+            default => new BusinessRuleException('A apólice só pode ser expirada após o fim da vigência.', 'status'),
+        };
     }
 
     private function generateInstallments(Policy $policy): void

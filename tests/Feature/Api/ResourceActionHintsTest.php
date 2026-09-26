@@ -44,6 +44,18 @@ class ResourceActionHintsTest extends TestCase
             ->assertJsonPath('data.is_deletable', false);
     }
 
+    public function test_policy_transitions_respect_the_term_dates(): void
+    {
+        $current = Policy::factory()->active()->create(['starts_on' => today()->subMonth(), 'ends_on' => today()->addMonths(11)]);
+        $ended = Policy::factory()->suspended()->create(['starts_on' => today()->subYear()->subDays(2), 'ends_on' => today()->subDays(2)]);
+
+        $this->getJson("/api/policies/{$current->id}")
+            ->assertJsonPath('data.allowed_transitions.*.value', ['suspended', 'cancelled']);
+
+        $this->getJson("/api/policies/{$ended->id}")
+            ->assertJsonPath('data.allowed_transitions.*.value', ['cancelled', 'expired']);
+    }
+
     public function test_claim_exposes_allowed_transitions(): void
     {
         $claim = Claim::factory()->underReview()->create();

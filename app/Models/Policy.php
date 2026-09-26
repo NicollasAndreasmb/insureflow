@@ -91,6 +91,32 @@ class Policy extends Model
         return $this->hasMany(Claim::class);
     }
 
+    /**
+     * Condições de vigência para um status: só fica ativa se a vigência não
+     * terminou, e só expira depois que ela termina.
+     */
+    public function termAllows(PolicyStatus $status): bool
+    {
+        return match ($status) {
+            PolicyStatus::Active => $this->ends_on->gte(today()),
+            PolicyStatus::Expired => $this->ends_on->lt(today()),
+            default => true,
+        };
+    }
+
+    /**
+     * Transições possíveis agora: as do enum que também atendem à vigência.
+     *
+     * @return list<PolicyStatus>
+     */
+    public function availableTransitions(): array
+    {
+        return array_values(array_filter(
+            $this->status->allowedTransitions(),
+            fn (PolicyStatus $status) => $this->termAllows($status),
+        ));
+    }
+
     public function isEditable(): bool
     {
         return ! $this->status->isFinal();

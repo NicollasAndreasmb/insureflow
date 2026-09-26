@@ -23,7 +23,7 @@ class PolicyResource extends JsonResource
             'id' => $this->id,
             'number' => $this->number,
             'status' => $this->enum($this->status),
-            'allowed_transitions' => $this->enumList($this->status->allowedTransitions()),
+            'allowed_transitions' => $this->enumList($this->availableTransitions()),
             'is_editable' => $this->isEditable(),
             'is_deletable' => $this->isDeletable(),
             'client_id' => $this->client_id,
