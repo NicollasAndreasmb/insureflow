@@ -13,6 +13,7 @@ class HealthCheckTest extends TestCase
             ->assertJson([
                 'status' => 'ok',
                 'database' => 'connected',
-            ]);
+            ])
+            ->assertJsonMissingPath('environment');
     }
 }

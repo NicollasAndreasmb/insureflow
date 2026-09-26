@@ -105,7 +105,9 @@ class ClientApiTest extends TestCase
         $this->getJson('/api/clients?person_type=company')->assertJsonCount(1, 'data');
         $this->getJson('/api/clients?state=RJ')->assertJsonCount(1, 'data');
         $this->getJson('/api/clients?per_page=1')->assertJsonCount(1, 'data')->assertJsonPath('meta.total', 3);
-        $this->getJson('/api/clients?sort=password')->assertUnprocessable()->assertJsonValidationErrors('sort');
+        $this->getJson('/api/clients?sort=password')
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.sort.0', 'O valor selecionado para ordenação é inválido.');
     }
 
     public function test_shows_client_details_with_policies(): void

@@ -23,7 +23,6 @@ class HealthCheckController extends Controller
         return response()->json([
             'status' => $databaseIsReachable ? 'ok' : 'degraded',
             'app' => config('app.name'),
-            'environment' => app()->environment(),
             'database' => $databaseIsReachable ? 'connected' : 'unreachable',
             'timestamp' => now()->toIso8601String(),
         ], $databaseIsReachable ? 200 : 503);
