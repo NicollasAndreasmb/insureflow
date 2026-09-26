@@ -1,9 +1,34 @@
-@import 'tailwindcss';
+/* source(none) evita a varredura automática do projeto inteiro, que leva ~60s em bind mounts do Windows. */
+@import 'tailwindcss' source(none);
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+@source '../js';
+@source '../views';
 
+/*
+ * Identidade visual: azul-marinho transmite a confiança esperada de uma corretora,
+ * e o verde-azulado (accent) sinaliza estados positivos e ações principais sem
+ * deixar a interface pesada. Os componentes devem usar estes tokens (brand-*,
+ * accent-*) em vez de cores soltas, para que a paleta possa ser ajustada aqui.
+ */
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+
+    --color-brand-50: #eff5ff;
+    --color-brand-100: #dbe7fe;
+    --color-brand-200: #bfd4fe;
+    --color-brand-300: #93b6fd;
+    --color-brand-400: #608dfa;
+    --color-brand-500: #3b66f5;
+    --color-brand-600: #2548ea;
+    --color-brand-700: #1d36d7;
+    --color-brand-800: #1e2fae;
+    --color-brand-900: #1a2b6d;
+    --color-brand-950: #121b44;
+
+    --color-accent-50: #effefa;
+    --color-accent-100: #c8fff1;
+    --color-accent-500: #14b89a;
+    --color-accent-600: #0c947e;
+    --color-accent-700: #0f7667;
 }
