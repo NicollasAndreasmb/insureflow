@@ -19,6 +19,8 @@ class ClaimResource extends JsonResource
             'id' => $this->id,
             'protocol' => $this->protocol,
             'status' => $this->enum($this->status),
+            'allowed_transitions' => $this->enumList($this->status->allowedTransitions()),
+            'is_editable' => $this->isEditable(),
             'policy_id' => $this->policy_id,
             'policy' => new PolicyResource($this->whenLoaded('policy')),
             'client' => new ClientResource($this->whenLoaded('client')),

@@ -19,22 +19,22 @@ class RolePermissionsTest extends TestCase
     {
         return [
             'admin' => [UserRole::Admin, [
-                'clients.create' => true, 'clients.delete' => true,
+                'clients.create' => true, 'clients.update' => true, 'clients.delete' => true,
                 'insurers.manage' => true, 'insurance_products.manage' => true,
                 'policies.manage' => true, 'policies.delete' => true, 'coverages.manage' => true,
-                'claims.manage' => true, 'claims.delete' => true, 'users.manage' => true,
+                'installments.pay' => true, 'claims.manage' => true, 'claims.delete' => true, 'users.manage' => true, 'activity_logs.view' => true,
             ]],
             'broker' => [UserRole::Broker, [
-                'clients.create' => true, 'clients.delete' => true,
+                'clients.create' => true, 'clients.update' => true, 'clients.delete' => true,
                 'insurers.manage' => false, 'insurance_products.manage' => false,
                 'policies.manage' => true, 'policies.delete' => false, 'coverages.manage' => true,
-                'claims.manage' => true, 'claims.delete' => false, 'users.manage' => false,
+                'installments.pay' => true, 'claims.manage' => true, 'claims.delete' => false, 'users.manage' => false, 'activity_logs.view' => true,
             ]],
             'assistant' => [UserRole::Assistant, [
-                'clients.create' => true, 'clients.delete' => false,
+                'clients.create' => true, 'clients.update' => true, 'clients.delete' => false,
                 'insurers.manage' => false, 'insurance_products.manage' => false,
                 'policies.manage' => false, 'policies.delete' => false, 'coverages.manage' => false,
-                'claims.manage' => true, 'claims.delete' => false, 'users.manage' => false,
+                'installments.pay' => true, 'claims.manage' => true, 'claims.delete' => false, 'users.manage' => false, 'activity_logs.view' => true,
             ]],
         ];
     }

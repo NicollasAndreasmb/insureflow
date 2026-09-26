@@ -117,7 +117,7 @@ class PolicyService
 
     public function delete(Policy $policy): void
     {
-        if ($policy->status !== PolicyStatus::Quote) {
+        if (! $policy->isDeletable()) {
             throw new BusinessRuleException(
                 'Somente cotações podem ser excluídas. Para encerrar uma apólice, altere o status para Cancelada.',
                 'status',

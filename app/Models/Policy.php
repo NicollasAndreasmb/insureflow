@@ -91,9 +91,19 @@ class Policy extends Model
         return $this->hasMany(Claim::class);
     }
 
+    public function isEditable(): bool
+    {
+        return ! $this->status->isFinal();
+    }
+
+    public function isDeletable(): bool
+    {
+        return $this->status === PolicyStatus::Quote;
+    }
+
     public function ensureIsEditable(): void
     {
-        if ($this->status->isFinal()) {
+        if (! $this->isEditable()) {
             throw new BusinessRuleException(
                 "Apólices com status {$this->status->label()} não podem ser alteradas.",
                 'status',

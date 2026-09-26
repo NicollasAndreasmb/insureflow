@@ -57,9 +57,14 @@ class Installment extends Model
         return $this->isOverdue() ? InstallmentStatus::Overdue : $this->status;
     }
 
+    public function isPayable(): bool
+    {
+        return $this->status === InstallmentStatus::Pending;
+    }
+
     public function registerPayment(CarbonInterface $paidOn): void
     {
-        if ($this->status !== InstallmentStatus::Pending) {
+        if (! $this->isPayable()) {
             throw new BusinessRuleException(
                 "Somente parcelas pendentes podem ser pagas. Esta parcela está {$this->status->label()}.",
                 'status',

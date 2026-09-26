@@ -18,4 +18,12 @@ trait SerializesEnums
 
         return ['value' => $enum->value, 'label' => $enum->label()];
     }
+
+    /**
+     * @param  list<BackedEnum>  $enums
+     */
+    protected function enumList(array $enums): array
+    {
+        return array_map(fn (BackedEnum $enum) => $this->enum($enum), $enums);
+    }
 }

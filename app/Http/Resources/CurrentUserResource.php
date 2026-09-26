@@ -2,9 +2,11 @@
 
 namespace App\Http\Resources;
 
+use App\Models\ActivityLog;
 use App\Models\Claim;
 use App\Models\Client;
 use App\Models\Coverage;
+use App\Models\Installment;
 use App\Models\InsuranceProduct;
 use App\Models\Insurer;
 use App\Models\Policy;
@@ -26,15 +28,18 @@ class CurrentUserResource extends UserResource
             ...parent::toArray($request),
             'permissions' => [
                 'clients.create' => $this->can('create', Client::class),
+                'clients.update' => $this->can('update', new Client),
                 'clients.delete' => $this->can('delete', new Client),
                 'insurers.manage' => $this->can('create', Insurer::class),
                 'insurance_products.manage' => $this->can('create', InsuranceProduct::class),
                 'policies.manage' => $this->can('create', Policy::class),
                 'policies.delete' => $this->can('delete', new Policy),
                 'coverages.manage' => $this->can('create', Coverage::class),
+                'installments.pay' => $this->can('pay', new Installment),
                 'claims.manage' => $this->can('create', Claim::class),
                 'claims.delete' => $this->can('delete', new Claim),
                 'users.manage' => $this->can('create', User::class),
+                'activity_logs.view' => $this->can('viewAny', ActivityLog::class),
             ],
         ];
     }

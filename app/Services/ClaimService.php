@@ -62,7 +62,7 @@ class ClaimService
 
     public function update(Claim $claim, array $data): Claim
     {
-        if ($claim->status->isFinal()) {
+        if (! $claim->isEditable()) {
             throw new BusinessRuleException('Sinistros encerrados não podem ser alterados.', 'status');
         }
 

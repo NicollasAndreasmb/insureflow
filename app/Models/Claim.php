@@ -56,6 +56,11 @@ class Claim extends Model
         return $this->hasOneThrough(Client::class, Policy::class, 'id', 'id', 'policy_id', 'client_id');
     }
 
+    public function isEditable(): bool
+    {
+        return ! $this->status->isFinal();
+    }
+
     public function statusHistory(): HasMany
     {
         return $this->hasMany(ClaimStatusHistory::class)->oldest('created_at')->oldest('id');

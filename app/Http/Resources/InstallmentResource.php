@@ -28,6 +28,7 @@ class InstallmentResource extends JsonResource
             'paid_on' => $this->paid_on?->toDateString(),
             'status' => $this->enum($this->effectiveStatus()),
             'is_overdue' => $this->isOverdue(),
+            'is_payable' => $this->isPayable(),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];
