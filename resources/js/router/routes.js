@@ -62,6 +62,7 @@ export const routes = [
                 meta: { title: 'Editar seguradora', permission: 'insurers.manage' },
             },
 
+            { path: 'insurance-products', name: 'products.index', component: () => import('@/pages/products/ProductListPage.vue'), meta: { title: 'Modalidades' } },
 
             { path: 'forbidden', name: 'forbidden', component: () => import('@/pages/errors/ForbiddenPage.vue'), meta: { title: 'Acesso negado' } },
             { path: ':pathMatch(.*)*', name: 'not-found', component: () => import('@/pages/errors/NotFoundPage.vue'), meta: { title: 'Página não encontrada' } },
