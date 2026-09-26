@@ -5,7 +5,7 @@
  * as páginas são renderizadas. As opções da API (/api/options) são carregadas
  * aqui, uma vez por sessão, antes de renderizar as páginas que dependem delas.
  */
-import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import SidebarNav from '@/components/layout/SidebarNav.vue';
 import AppIcon from '@/components/ui/AppIcon.vue';
@@ -54,9 +54,45 @@ function onKeydown(event) {
     }
 }
 
-watch(() => route.fullPath, () => {
-    sidebarOpen.value = false;
+/*
+ * Foco para leitores de tela e teclado: numa SPA a troca de página não recarrega
+ * o documento, então o foco é levado ao título da nova página (ou à área
+ * principal enquanto ela carrega). Ao abrir a gaveta no mobile, o foco entra
+ * nela e o conteúdo atrás fica inerte; ao fechá-la sem navegar, volta ao botão
+ * de menu.
+ */
+const menuButton = ref(null);
+const sidebarCloseButton = ref(null);
+let navigating = false;
+
+function focusPage() {
+    const target = document.querySelector('[data-page-title]') ?? document.getElementById('main-content');
+    target?.focus({ preventScroll: true });
+}
+
+watch(sidebarOpen, async (open, wasOpen) => {
+    await nextTick();
+
+    if (open) {
+        sidebarCloseButton.value?.focus();
+    } else if (wasOpen && !navigating) {
+        menuButton.value?.focus();
+    }
 });
+
+watch(
+    () => route.path,
+    async (path, previous) => {
+        navigating = true;
+        sidebarOpen.value = false;
+        await nextTick();
+        navigating = false;
+
+        if (previous !== undefined) {
+            focusPage();
+        }
+    },
+);
 
 onMounted(() => {
     loadOptions();
@@ -93,6 +129,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                 <button
                     type="button"
                     class="rounded-md p-1 text-brand-100 hover:text-white focus-visible:outline-2 focus-visible:outline-accent-500 lg:hidden"
+                    ref="sidebarCloseButton"
                     aria-label="Fechar menu"
                     @click="sidebarOpen = false"
                 >
@@ -102,11 +139,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
             <SidebarNav @navigate="sidebarOpen = false" />
         </aside>
 
-        <div class="lg:pl-64">
+        <div class="lg:pl-64" :inert="sidebarOpen || undefined">
             <header class="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-6">
                 <button
                     type="button"
                     class="-ml-1 rounded-md p-1.5 text-slate-600 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-brand-600 lg:hidden"
+                    ref="menuButton"
                     aria-label="Abrir menu"
                     aria-controls="app-sidebar"
                     :aria-expanded="sidebarOpen"

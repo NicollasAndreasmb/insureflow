@@ -96,7 +96,7 @@ onBeforeUnmount(() => {
                     <button
                         v-if="dismissible"
                         type="button"
-                        class="-m-1 rounded-md p-1 text-slate-400 hover:text-slate-600 focus-visible:outline-2 focus-visible:outline-brand-600"
+                        class="-m-1 rounded-md p-1 text-slate-500 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-brand-600"
                         aria-label="Fechar"
                         @click="close"
                     >

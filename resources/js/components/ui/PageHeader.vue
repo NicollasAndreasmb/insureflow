@@ -23,7 +23,7 @@ defineProps({
         </nav>
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="min-w-0">
-                <h1 class="truncate text-2xl font-semibold text-brand-950">{{ title }}</h1>
+                <h1 tabindex="-1" data-page-title class="truncate text-2xl font-semibold text-brand-950 focus:outline-none">{{ title }}</h1>
                 <p v-if="subtitle || $slots.subtitle" class="mt-1 text-sm text-slate-500">
                     <slot name="subtitle">{{ subtitle }}</slot>
                 </p>

@@ -28,7 +28,7 @@ const styles = {
             <p class="flex-1 text-sm text-slate-700">{{ item.message }}</p>
             <button
                 type="button"
-                class="rounded p-0.5 text-slate-400 hover:text-slate-600 focus-visible:outline-2 focus-visible:outline-brand-600"
+                class="rounded p-0.5 text-slate-500 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-brand-600"
                 aria-label="Fechar notificação"
                 @click="notifications.dismiss(item.id)"
             >

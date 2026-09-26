@@ -6,7 +6,8 @@
  * link e o botão "voltar" funciona. Alterar filtros volta para a página 1.
  * Nada é filtrado ou ordenado no navegador. Uma requisição em andamento é
  * cancelada quando outra começa, evitando que uma resposta antiga sobrescreva
- * a mais recente.
+ * a mais recente. Se a página pedida deixou de existir (ex.: o último item da
+ * última página foi excluído), a listagem volta para a última página válida.
  */
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -57,6 +58,10 @@ export function usePaginatedList(fetcher, { filterKeys = [], defaultSort = '', p
             );
             items.value = response.data;
             meta.value = response.meta;
+
+            if (!response.data.length && page.value > 1 && response.meta.last_page < page.value) {
+                updateQuery({ page: response.meta.last_page > 1 ? response.meta.last_page : undefined });
+            }
         } catch (exception) {
             if (exception?.name !== 'CanceledError') {
                 error.value = toApiError(exception);

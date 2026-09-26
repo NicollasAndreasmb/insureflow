@@ -219,7 +219,7 @@ function daysLeftLabel(days) {
                 </AppCard>
             </div>
 
-            <p class="text-right text-xs text-slate-400">Atualizado em {{ formatDateTime(data.generated_at) }}</p>
+            <p class="text-right text-xs text-slate-500">Atualizado em {{ formatDateTime(data.generated_at) }}</p>
         </div>
     </div>
 </template>
