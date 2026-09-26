@@ -3,7 +3,7 @@
 Sistema web de gestão para corretoras de seguros: clientes, seguradoras, modalidades,
 apólices, coberturas, parcelas, sinistros e dashboard de indicadores.
 
-> **Status:** Fase 1 (fundação) concluída. Os módulos de negócio serão adicionados
+> **Status:** Fases 1 (fundação) e 2 (banco de dados) concluídas. Os módulos de negócio serão adicionados
 > incrementalmente. A documentação completa (arquitetura, endpoints, screenshots)
 > será expandida ao longo do desenvolvimento.
 
@@ -48,7 +48,7 @@ cp .env.example .env
 docker compose up -d --build
 docker compose exec app composer install
 docker compose exec app php artisan key:generate
-docker compose exec app php artisan migrate
+docker compose exec app php artisan migrate --seed
 ```
 
 Acesse **http://localhost:8000**. A página inicial verifica se frontend, API e
@@ -58,6 +58,47 @@ O container `node` executa `npm install` automaticamente ao subir; na primeira
 vez pode levar alguns minutos até o Vite ficar disponível
 (`docker compose logs -f node`). O `scheduler` reinicia sozinho até que o
 `composer install` tenha sido executado.
+
+## Dados de demonstração
+
+`php artisan migrate --seed` (ou `migrate:fresh --seed` para recriar tudo) gera
+dados fictícios coerentes, com datas relativas ao dia da execução: cerca de 180
+apólices em todos os status, coberturas, parcelas pagas, a vencer e atrasadas,
+apólices vencendo nos próximos 30 dias e sinistros com histórico de status.
+
+| Perfil | E-mail |
+|---|---|
+| Administrador | `admin@insureflow.test` |
+| Corretor | `corretor@insureflow.test` |
+| Assistente | `assistente@insureflow.test` |
+
+A senha é o valor de `SEED_DEFAULT_PASSWORD` no `.env`. Os seeders se recusam a
+rodar com `APP_ENV=production`.
+
+## Modelo de dados
+
+```
+clients ──1:N──> policies <──N:1── insurers
+                   │  ^  ^
+                   │  │  └──N:1── insurance_products
+                   │  └──N:1── users (broker_id)
+                   ├──1:N──> coverages
+                   ├──1:N──> installments
+                   └──1:N──> claims ──1:N──> claim_status_histories
+
+activity_logs ──polimórfica──> qualquer entidade auditável
+```
+
+Invariantes garantidas pelo próprio PostgreSQL:
+
+- valores monetários em `decimal(12,2)` e CHECKs contra valores negativos;
+- vigência válida (`ends_on > starts_on`) e sinistro comunicado após a ocorrência;
+- `commission_amount` é coluna gerada a partir de `premium × commission_rate`;
+- parcela paga se e somente se houver data de pagamento; "atrasado" não é gravado,
+  é derivado (pendente com vencimento passado);
+- sinistro aprovado exige valor aprovado, negado não pode tê-lo;
+- CPF/CNPJ coerente com o tipo de pessoa e únicos entre registros não excluídos;
+- `claim_status_histories` e `activity_logs` são somente inserção (trigger).
 
 ## Comandos do dia a dia
 
@@ -88,6 +129,7 @@ para o ambiente Docker:
 | `DB_PASSWORD` | `change-me-local-only` | Senha do banco local; obrigatória |
 | `HOST_UID` / `HOST_GID` | `1000` | Usuário dos containers PHP (relevante em hosts Linux) |
 | `VITE_USE_POLLING` | `true` | Detecção de alterações em bind mounts do Windows/macOS |
+| `SEED_DEFAULT_PASSWORD` | `password` | Senha dos usuários de demonstração (somente desenvolvimento) |
 
 Se alterar `APP_PORT`, ajuste também `APP_URL` e `SANCTUM_STATEFUL_DOMAINS`.
 
