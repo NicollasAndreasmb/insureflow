@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Enums\InstallmentStatus;
+use App\Exceptions\BusinessRuleException;
 use App\Models\Concerns\HasActivityLog;
+use Carbon\CarbonInterface;
 use Database\Factories\InstallmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -55,9 +57,38 @@ class Installment extends Model
         return $this->isOverdue() ? InstallmentStatus::Overdue : $this->status;
     }
 
+    public function registerPayment(CarbonInterface $paidOn): void
+    {
+        if ($this->status !== InstallmentStatus::Pending) {
+            throw new BusinessRuleException(
+                "Somente parcelas pendentes podem ser pagas. Esta parcela está {$this->status->label()}.",
+                'status',
+            );
+        }
+
+        $this->update(['status' => InstallmentStatus::Paid, 'paid_on' => $paidOn]);
+    }
+
     #[Scope]
     protected function overdue(Builder $query): void
     {
         $query->where('status', InstallmentStatus::Pending)->where('due_date', '<', today());
+    }
+
+    #[Scope]
+    protected function filter(Builder $query, array $filters): void
+    {
+        $query
+            ->when($filters['status'] ?? null, fn (Builder $query, string $status) => match (InstallmentStatus::from($status)) {
+                InstallmentStatus::Overdue => $query->overdue(),
+                InstallmentStatus::Pending => $query->where('status', InstallmentStatus::Pending)->where('due_date', '>=', today()),
+                default => $query->where('status', $status),
+            })
+            ->when($filters['policy_id'] ?? null, fn (Builder $query, int|string $id) => $query->where('policy_id', $id))
+            ->when($filters['client_id'] ?? null, fn (Builder $query, int|string $id) => $query->whereHas(
+                'policy', fn (Builder $query) => $query->where('client_id', $id),
+            ))
+            ->when($filters['due_from'] ?? null, fn (Builder $query, string $date) => $query->where('due_date', '>=', $date))
+            ->when($filters['due_until'] ?? null, fn (Builder $query, string $date) => $query->where('due_date', '<=', $date));
     }
 }

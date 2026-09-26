@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\PaymentMethod;
 use App\Enums\PolicyStatus;
+use App\Exceptions\BusinessRuleException;
 use App\Models\Concerns\HasActivityLog;
 use Database\Factories\PolicyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -88,6 +89,33 @@ class Policy extends Model
     public function claims(): HasMany
     {
         return $this->hasMany(Claim::class);
+    }
+
+    public function ensureIsEditable(): void
+    {
+        if ($this->status->isFinal()) {
+            throw new BusinessRuleException(
+                "Apólices com status {$this->status->label()} não podem ser alteradas.",
+                'status',
+            );
+        }
+    }
+
+    #[Scope]
+    protected function filter(Builder $query, array $filters): void
+    {
+        $query
+            ->when($filters['search'] ?? null, fn (Builder $query, string $term) => $query->where(
+                fn (Builder $query) => $query
+                    ->where('number', 'ilike', "%{$term}%")
+                    ->orWhereHas('client', fn (Builder $query) => $query->where('name', 'ilike', "%{$term}%")),
+            ))
+            ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status))
+            ->when($filters['client_id'] ?? null, fn (Builder $query, int|string $id) => $query->where('client_id', $id))
+            ->when($filters['insurer_id'] ?? null, fn (Builder $query, int|string $id) => $query->where('insurer_id', $id))
+            ->when($filters['insurance_product_id'] ?? null, fn (Builder $query, int|string $id) => $query->where('insurance_product_id', $id))
+            ->when($filters['broker_id'] ?? null, fn (Builder $query, int|string $id) => $query->where('broker_id', $id))
+            ->when($filters['expiring_within_days'] ?? null, fn (Builder $query, int|string $days) => $query->expiringWithin((int) $days));
     }
 
     #[Scope]

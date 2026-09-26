@@ -92,14 +92,14 @@ class ClientApiTest extends TestCase
     public function test_lists_clients_with_search_filters_and_pagination(): void
     {
         $this->actingAsRole(UserRole::Assistant);
-        Client::factory()->create(['name' => 'Ana Beatriz Lima', 'state' => 'SP']);
+        Client::factory()->create(['name' => 'Ana Beatriz Xylo', 'state' => 'SP']);
         Client::factory()->create(['name' => 'Carlos Pereira', 'state' => 'RJ']);
-        Client::factory()->company()->create(['name' => 'Lima Transportes Ltda', 'state' => 'SP']);
+        Client::factory()->company()->create(['name' => 'Xylo Transportes Ltda', 'state' => 'SP']);
 
-        $this->getJson('/api/clients?search=lima&sort=name')
+        $this->getJson('/api/clients?search=xylo&sort=name')
             ->assertOk()
             ->assertJsonCount(2, 'data')
-            ->assertJsonPath('data.0.name', 'Ana Beatriz Lima')
+            ->assertJsonPath('data.0.name', 'Ana Beatriz Xylo')
             ->assertJsonStructure(['data', 'links', 'meta' => ['current_page', 'total', 'per_page']]);
 
         $this->getJson('/api/clients?person_type=company')->assertJsonCount(1, 'data');
