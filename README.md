@@ -3,9 +3,9 @@
 Sistema web de gestão para corretoras de seguros: clientes, seguradoras, modalidades,
 apólices, coberturas, parcelas, sinistros e dashboard de indicadores.
 
-> **Status:** Fases 1 (fundação), 2 (banco de dados) e 3 (backend e API) concluídas.
-> A API REST está completa e testada; as telas Vue dos módulos ainda não foram
-> construídas (a SPA exibe apenas a página de verificação do ambiente).
+> **Status:** backend, API e frontend concluídos. O sistema pode ser usado de ponta
+> a ponta pela interface Vue: dashboard, clientes, seguradoras, modalidades,
+> apólices (com coberturas e parcelas), sinistros, usuários e auditoria.
 
 ## Stack
 
@@ -31,7 +31,7 @@ CSRF, sem tokens no `localStorage`.
 | `app` | PHP-FPM executando o Laravel | — |
 | `scheduler` | `php artisan schedule:work` (tarefas agendadas) | — |
 | `postgres` | Banco de dados (`insureflow` e `insureflow_test`) | `5433` |
-| `node` | Servidor Vite com HMR | `5173` |
+| `node` | Servidor Vite com HMR, build e testes do frontend (`node_modules` em volume próprio) | `5173` |
 
 ## Requisitos
 
@@ -51,8 +51,7 @@ docker compose exec app php artisan key:generate
 docker compose exec app php artisan migrate --seed
 ```
 
-Acesse **http://localhost:8000**. A página inicial verifica se frontend, API e
-banco estão funcionando.
+Acesse **http://localhost:8000** e entre com uma das contas de demonstração abaixo.
 
 O container `node` executa `npm install` automaticamente ao subir; na primeira
 vez pode levar alguns minutos até o Vite ficar disponível
@@ -254,6 +253,67 @@ Todas as rotas abaixo exigem autenticação, exceto `/api/health` e `/api/login`
 Criação retorna **201**, exclusão **204**. Mensagens são em português e nunca
 expõem classes, SQL ou stack traces (com `APP_DEBUG=false`).
 
+**O que o frontend pode fazer com cada registro** também vem da API, para que o Vue
+não replique regras do backend:
+
+| Campo | Onde | Significado |
+|---|---|---|
+| `allowed_transitions` | apólices, sinistros | Status para os quais o registro pode ir agora |
+| `is_editable` | apólices, sinistros | Se ainda aceita edição (não está em estado final) |
+| `is_deletable` | apólices | Se pode ser excluída (somente cotações) |
+| `is_payable` | parcelas | Se o pagamento pode ser registrado |
+| `permissions` | `/api/user` | O que o perfil do usuário permite |
+
+## Frontend
+
+SPA em Vue 3 (JavaScript, Composition API) servida pelo próprio Laravel.
+
+| Pasta (`resources/js`) | Responsabilidade |
+|---|---|
+| `api/` | Único ponto de acesso HTTP: Axios configurado para Sanctum (CSRF, sessão), conversão de erros em `ApiError` e funções por recurso |
+| `stores/` | Pinia: sessão (`/api/user`), opções (`/api/options`), notificações e diálogo de confirmação |
+| `composables/` | `useForm` (erros 422 por campo, bloqueio de envio duplo), `usePaginatedList` (filtros/ordenação/página na URL), `useAsyncData`, listas para selects |
+| `router/` | Rotas por módulo e guards (login, `meta.permission` com as chaves do backend) |
+| `layouts/` | Layout autenticado: sidebar (gaveta no mobile), header, logout |
+| `components/` | `ui/` (botões, modal, estados), `form/` (campos acessíveis, dinheiro, máscaras, busca remota), `data/` (tabela, paginação, busca) e componentes por módulo |
+| `pages/` | Uma página por tela, organizadas por módulo |
+| `utils/` | Formatação pt-BR (datas sem deslocamento de fuso, moeda, documentos) e máscaras |
+| `tests/` | Testes com Vitest + @vue/test-utils |
+
+**Princípios**
+
+- Nenhum componente usa o Axios diretamente; toda chamada passa por `api/`.
+- A sessão vive no cookie HttpOnly do Laravel. Nada de autenticação é salvo no
+  navegador; o usuário e suas permissões vêm sempre de `/api/user`.
+- Sessão expirada (401 durante o uso) limpa o estado e volta ao login com
+  `?redirect=` para retornar à mesma página. Um 419 (CSRF) renova o cookie e repete
+  a requisição uma vez.
+- Rótulos de enums, UFs, nomes de entidades e de campos vêm de `/api/options`.
+- Listagens nunca filtram ou ordenam no navegador: os filtros ficam na URL e são
+  enviados à API.
+- Erros 422 aparecem no campo correspondente e em um alerta no topo do formulário;
+  403, 404, 500 e falhas de rede têm mensagens próprias.
+- Operações destrutivas e transições de status pedem confirmação.
+
+**Telas**
+
+| Rota | Tela | Permissão |
+|---|---|---|
+| `/login` | Login | — |
+| `/` | Dashboard | — |
+| `/clients`, `/clients/:id` | Clientes e detalhe (apólices, histórico) | — |
+| `/clients/new`, `/clients/:id/edit` | Cadastro e edição de cliente | `clients.create` / `clients.update` |
+| `/insurers`, `/insurers/:id` | Seguradoras | — |
+| `/insurers/new`, `/insurers/:id/edit` | Cadastro e edição de seguradora | `insurers.manage` |
+| `/insurance-products` | Modalidades (cadastro em modal) | edição: `insurance_products.manage` |
+| `/policies`, `/policies/:id` | Apólices e visão central da apólice | — |
+| `/policies/new`, `/policies/:id/edit` | Cadastro e edição de apólice | `policies.manage` |
+| `/installments` | Consulta financeira de parcelas | pagamento: `installments.pay` |
+| `/claims`, `/claims/:id` | Sinistros e detalhe com histórico de status | — |
+| `/claims/new` | Abertura de sinistro | `claims.manage` |
+| `/users` | Usuários | `users.manage` |
+| `/activity-logs` | Auditoria | `activity_logs.view` |
+
 ## Comandos do dia a dia
 
 ```bash
@@ -268,6 +328,7 @@ docker compose exec app php artisan route:list --path=api   # rotas da API
 docker compose exec app composer require ...   # dependências PHP
 docker compose exec node npm install ...       # dependências JS
 docker compose exec node npm run build         # build de produção dos assets
+docker compose exec node npm test              # testes do frontend (Vitest)
 
 docker compose logs -f app node                # logs
 ```
@@ -307,6 +368,18 @@ docker compose exec app php artisan test --filter=PolicyApiTest   # um arquivo e
 | `tests/Feature/Database` | Constraints do PostgreSQL, relacionamentos, auditoria, seeders, fuso horário |
 | `tests/Feature/Console` | Expiração automática de apólices e agendamento |
 
+**Frontend** (Vitest + @vue/test-utils em jsdom, com a API simulada):
+
+```bash
+docker compose exec node npm test
+```
+
+| Arquivo (`resources/js/tests`) | Cobertura |
+|---|---|
+| `http`, `router`, `useForm`, `utils` | Cliente HTTP (401, 419, 422, rede), guards e redirect, formulários, formatação e máscaras |
+| `components`, `SidebarNav` | Acessibilidade dos campos, tabela (ordenação), modal (foco, Esc), menu por permissão |
+| `DashboardPage`, `clients`, `catalog`, `policies`, `claims`, `admin` | Listagens, filtros na URL, formulários com 422, transições de status, pagamento de parcela, estados de carregamento/erro/vazio e visibilidade por permissão |
+
 ## Estrutura do projeto
 
 ```
@@ -323,13 +396,14 @@ docker compose exec app php artisan test --filter=PolicyApiTest   # um arquivo e
 ├── lang/pt_BR/               # mensagens de validação e da API
 ├── docker/
 │   ├── nginx/default.conf
+│   ├── node/Dockerfile       # Node 22 com node_modules em volume nomeado
 │   ├── php/Dockerfile        # PHP-FPM 8.4 + extensões + Composer
 │   └── postgres/             # script de criação do banco de testes
 ├── resources/
 │   ├── css/app.css           # Tailwind + tokens de cor da marca
-│   ├── js/                   # SPA Vue
-│   │   ├── components/  composables/  layouts/  pages/
-│   │   ├── router/  services/  stores/  utils/
+│   ├── js/                   # SPA Vue (ver seção Frontend)
+│   │   ├── api/  components/  composables/  layouts/  pages/
+│   │   ├── router/  stores/  tests/  utils/
 │   └── views/app.blade.php   # shell HTML da SPA
 ├── routes/{api,web}.php
 ├── tests/
@@ -344,3 +418,10 @@ docker compose exec app php artisan test --filter=PolicyApiTest   # um arquivo e
   com CRLF quebram dentro dos containers Linux.
 - Se alguma porta estiver ocupada, altere `APP_PORT`, `VITE_PORT` ou
   `FORWARD_DB_PORT` no `.env`.
+- O `node_modules` fica em um volume do Docker (`node-modules`), fora do bind mount:
+  ler milhares de arquivos pelo bind mount do Windows deixava o Vite e os testes
+  muito lentos. Por isso ele não aparece na pasta do projeto; instale pacotes com
+  `docker compose exec node npm install <pacote>`.
+- Pelo mesmo motivo, o Vite vigia apenas `resources/` e `routes/` (polling a cada
+  1s) e o opcache revalida os arquivos PHP a cada 2s: uma alteração de código pode
+  levar até 2s para valer.
