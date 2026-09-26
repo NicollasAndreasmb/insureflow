@@ -72,6 +72,7 @@ class ResourceActionHintsTest extends TestCase
         $this->getJson('/api/options')
             ->assertJsonPath('data.activity_actions.0', ['value' => 'created', 'label' => 'Criação'])
             ->assertJsonFragment(['value' => 'policy', 'label' => 'Apólice'])
+            ->assertJsonPath('data.policy_initial_statuses.*.value', ['quote', 'pending', 'active'])
             ->assertJsonPath('data.field_labels.premium', 'prêmio')
             ->assertJsonMissingPath('data.field_labels.coverages\.\*\.name');
     }

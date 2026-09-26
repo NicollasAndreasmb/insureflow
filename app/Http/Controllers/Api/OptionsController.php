@@ -31,6 +31,7 @@ class OptionsController extends Controller
             'person_types' => $this->options(PersonType::cases()),
             'payment_methods' => $this->options(PaymentMethod::cases()),
             'policy_statuses' => $this->options(PolicyStatus::cases()),
+            'policy_initial_statuses' => $this->options(PolicyStatus::initial()),
             'installment_statuses' => $this->options(InstallmentStatus::cases()),
             'claim_statuses' => $this->options(ClaimStatus::cases()),
             'user_roles' => $this->options(UserRole::cases()),

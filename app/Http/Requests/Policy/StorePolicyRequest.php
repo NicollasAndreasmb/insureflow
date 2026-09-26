@@ -35,9 +35,7 @@ class StorePolicyRequest extends FormRequest
     {
         return [
             ...$this->policyFieldRules((int) $this->input('insurer_id')),
-            'status' => ['sometimes', Rule::enum(PolicyStatus::class)->only([
-                PolicyStatus::Quote, PolicyStatus::Pending, PolicyStatus::Active,
-            ])],
+            'status' => ['sometimes', Rule::enum(PolicyStatus::class)->only(PolicyStatus::initial())],
             'coverages' => ['sometimes', 'array', 'max:20'],
             'coverages.*.name' => ['required', 'string', 'max:150', 'distinct'],
             'coverages.*.description' => ['nullable', 'string', 'max:2000'],

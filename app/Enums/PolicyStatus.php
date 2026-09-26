@@ -61,6 +61,17 @@ enum PolicyStatus: string
     }
 
     /**
+     * Status com que uma apólice pode ser cadastrada: cotação, pendente ou já
+     * ativa (quando é registrada depois de emitida pela seguradora).
+     *
+     * @return list<self>
+     */
+    public static function initial(): array
+    {
+        return [self::Quote, self::Pending, self::Active];
+    }
+
+    /**
      * @return list<self>
      */
     public static function nonFinal(): array
