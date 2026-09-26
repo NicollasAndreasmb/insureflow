@@ -103,6 +103,8 @@ export const routes = [
 
             { path: 'insurance-products', name: 'products.index', component: () => import('@/pages/products/ProductListPage.vue'), meta: { title: 'Modalidades' } },
 
+            { path: 'users', name: 'users.index', component: () => import('@/pages/users/UserListPage.vue'), meta: { title: 'Usuários', permission: 'users.manage' } },
+
             { path: 'forbidden', name: 'forbidden', component: () => import('@/pages/errors/ForbiddenPage.vue'), meta: { title: 'Acesso negado' } },
             { path: ':pathMatch(.*)*', name: 'not-found', component: () => import('@/pages/errors/NotFoundPage.vue'), meta: { title: 'Página não encontrada' } },
         ],
