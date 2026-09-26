@@ -94,7 +94,7 @@ export function usePaginatedList(fetcher, { filterKeys = [], defaultSort = '', p
 
     onBeforeUnmount(() => controller?.abort());
 
-    return {
+    return reactive({
         items,
         meta,
         loading,
@@ -107,5 +107,5 @@ export function usePaginatedList(fetcher, { filterKeys = [], defaultSort = '', p
         clearFilters,
         setSort: (value) => updateQuery({ sort: value, page: undefined }),
         setPage: (value) => updateQuery({ page: value > 1 ? value : undefined }),
-    };
+    });
 }

@@ -142,7 +142,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
             <main id="main-content" tabindex="-1" class="mx-auto max-w-7xl px-4 py-6 focus:outline-none sm:px-6 lg:px-8">
                 <ErrorState v-if="optionsError" :error="optionsError" @retry="loadOptions" />
                 <LoadingState v-else-if="!options.loaded" />
-                <RouterView v-else />
+                <RouterView v-else v-slot="{ Component, route: current }">
+                    <component :is="Component" :key="`${String(current.name)}:${JSON.stringify(current.params)}`" />
+                </RouterView>
             </main>
         </div>
     </div>
