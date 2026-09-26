@@ -1,44 +1,124 @@
 # InsureFlow
 
-Sistema web de gestão para corretoras de seguros: clientes, seguradoras, modalidades,
-apólices, coberturas, parcelas, sinistros e dashboard de indicadores.
+Sistema web de gestão para **corretoras de seguros**: clientes, seguradoras,
+modalidades, apólices com coberturas e parcelas, sinistros, usuários, auditoria e um
+dashboard com os indicadores da carteira.
 
-> **Status:** backend, API e frontend concluídos. O sistema pode ser usado de ponta
-> a ponta pela interface Vue: dashboard, clientes, seguradoras, modalidades,
-> apólices (com coberturas e parcelas), sinistros, usuários e auditoria.
+![Dashboard do InsureFlow](docs/screenshots/dashboard.jpg)
+
+## O problema
+
+Uma corretora acompanha dezenas ou centenas de apólices de várias seguradoras, cada
+uma com vigência, parcelas e, às vezes, sinistros em andamento. Sem um sistema, essa
+informação fica espalhada em planilhas e e-mails: renovações passam do prazo, parcelas
+atrasadas não são percebidas e não há registro de quem alterou o quê.
+
+O InsureFlow reúne a carteira em um só lugar e aplica as regras do negócio no
+backend: status que só mudam por transições válidas, parcelas geradas a partir do
+prêmio, comissão calculada pelo banco, sinistros aceitos apenas dentro da vigência e
+uma trilha de auditoria imutável.
+
+## Funcionalidades
+
+- **Dashboard** com clientes ativos, apólices ativas, prêmio e comissão da carteira,
+  vencimentos próximos, parcelas por situação, sinistros em aberto e distribuição por
+  modalidade.
+- **Clientes** (pessoa física e jurídica), com CPF/CNPJ validado por dígito verificador,
+  endereço, apólices vinculadas e histórico.
+- **Seguradoras** e **modalidades de seguro**.
+- **Apólices**: cadastro com coberturas, transições de status, geração automática de
+  parcelas, comissão calculada, registro de pagamentos e visão central com parcelas,
+  coberturas, sinistros e histórico.
+- **Parcelas**: consulta financeira de todas as apólices, com parcelas atrasadas
+  identificadas automaticamente.
+- **Sinistros**: abertura com protocolo sequencial, fluxo de análise e decisão, e
+  histórico completo de status.
+- **Usuários** com três perfis (administrador, corretor, assistente) e permissões
+  aplicadas no backend.
+- **Auditoria** de toda criação, alteração, exclusão e mudança de status.
+- **Expiração automática** das apólices com vigência encerrada, por tarefa agendada.
 
 ## Stack
 
-| Camada | Tecnologia |
+| Camada | Tecnologias |
 |---|---|
-| Backend | Laravel 13 · PHP 8.4 · Sanctum (SPA, cookie + CSRF) |
-| Frontend | Vue 3 (Composition API) · Vue Router · Pinia · Axios · Tailwind CSS 4 · Vite |
-| Banco | PostgreSQL 17 |
-| Infra | Docker · Docker Compose |
+| Backend | PHP 8.4 · Laravel 13 · Laravel Sanctum (SPA, sessão + CSRF) |
+| Frontend | Vue 3 (JavaScript, Composition API) · Vue Router · Pinia · Axios · Vite · Tailwind CSS 4 · Chart.js |
+| Banco de dados | PostgreSQL 17 |
+| Infraestrutura | Docker · Docker Compose · nginx · PHP-FPM |
+| Qualidade | PHPUnit · Vitest · @vue/test-utils · Laravel Pint |
 
-## Arquitetura resumida
+## Arquitetura
 
-Uma única aplicação Laravel expõe a API REST em `/api/*` e entrega uma view que
-carrega a SPA Vue (`resources/js`). Qualquer outra URL é resolvida pelo Vue Router.
-A autenticação usa o Sanctum em modo SPA: sessão em cookie HttpOnly com proteção
-CSRF, sem tokens no `localStorage`.
+```
+Navegador ──> nginx ──> PHP-FPM (Laravel: API REST + view da SPA) ──> PostgreSQL
+                              │
+                              └─ scheduler: expiração diária de apólices
+```
 
-### Serviços Docker
+- **Laravel** expõe uma API REST em `/api/*` e entrega a página que carrega a SPA.
+- **Vue** é uma SPA que consome apenas a API. O backend é a fonte da verdade: a SPA
+  recebe do servidor as permissões do usuário, os rótulos e até quais ações são
+  possíveis em cada registro, sem replicar regras de negócio.
+- **Sanctum** autentica por sessão em cookie HttpOnly com CSRF, sem tokens no navegador.
+- **Camadas do backend**: Form Requests (validação e autorização) → Controllers finos
+  → Services (onde há regra de negócio) → Models → API Resources.
+- **PostgreSQL** garante as invariantes com constraints, coluna gerada e triggers,
+  não apenas a aplicação.
+- **Docker** sobe o ambiente completo; nada precisa ser instalado na máquina além dele.
 
-| Serviço | Função | Porta no host |
-|---|---|---|
-| `web` | nginx, ponto de entrada HTTP | `8000` |
-| `app` | PHP-FPM executando o Laravel | — |
-| `scheduler` | `php artisan schedule:work` (tarefas agendadas) | — |
-| `postgres` | Banco de dados (`insureflow` e `insureflow_test`) | `5433` |
-| `node` | Servidor Vite com HMR, build e testes do frontend (`node_modules` em volume próprio) | `5173` |
+Detalhes e decisões: [docs/architecture.md](docs/architecture.md).
 
-## Requisitos
+## Domínio
 
-Somente **Docker** com **Docker Compose v2** (Docker Desktop no Windows/macOS).
-Não é necessário ter PHP, Composer, Node ou PostgreSQL instalados na máquina.
+| Entidade | Papel |
+|---|---|
+| Cliente | Pessoa física ou jurídica atendida pela corretora |
+| Seguradora | Companhia que emite as apólices |
+| Modalidade | Tipo de seguro (Auto, Residencial, Vida...) |
+| **Apólice** | Entidade central: vigência, prêmio, comissão, corretor e status |
+| Cobertura | Garantia contratada na apólice |
+| Parcela | Divisão do prêmio em pagamentos mensais |
+| Sinistro | Ocorrência comunicada sobre uma apólice |
+| Usuário | Administrador, corretor ou assistente |
+| Auditoria | Registro imutável das operações e do histórico de status |
 
-## Instalação
+## Regras de negócio importantes
+
+- **Transições de status**: a apólice segue cotação → pendente → ativa ⇄ suspensa →
+  expirada, e pode ser cancelada enquanto não estiver em estado final. Sinistros
+  seguem aberto → em análise ⇄ documentação pendente → aprovado/negado → encerrado.
+- **Parcelas**: geradas quando a cotação é emitida, em centavos, com a diferença de
+  arredondamento na 1ª parcela, para que a soma seja sempre igual ao prêmio.
+  Regeneradas se o prêmio mudar antes de qualquer pagamento.
+- **Comissão**: `prêmio × taxa`, calculada pelo PostgreSQL como coluna gerada; não há
+  como gravar um valor divergente.
+- **Atraso**: uma parcela está atrasada quando está pendente e o vencimento passou.
+  O status é calculado, nunca gravado, então nunca fica desatualizado.
+- **Sinistros**: só para apólice ativa, ou expirada quando a ocorrência foi durante a
+  vigência. Protocolo sequencial por ano, protegido contra concorrência.
+- **Expiração automática**: tarefa diária expira apólices com vigência encerrada, de
+  forma idempotente.
+- **Auditoria**: automática e imutável, com o usuário responsável e apenas os campos
+  alterados (nunca senhas).
+
+Regras completas e onde cada uma é garantida: [docs/domain-rules.md](docs/domain-rules.md).
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Login](docs/screenshots/login.jpg) | ![Apólices](docs/screenshots/policies.jpg) |
+| **Login** | **Listagem de apólices** com filtros e ordenação |
+| ![Detalhe da apólice](docs/screenshots/policy-detail.jpg) | ![Detalhe do sinistro](docs/screenshots/claim-detail.jpg) |
+| **Visão central da apólice** com ações de status | **Sinistro** com histórico de status |
+
+As telas mostram os dados fictícios gerados pelos seeders.
+
+## Como executar
+
+**Requisito:** apenas Docker com Docker Compose v2 (Docker Desktop no Windows/macOS).
+Não é preciso ter PHP, Composer, Node ou PostgreSQL instalados.
 
 ```bash
 git clone <url-do-repositorio> insureflow
@@ -51,19 +131,18 @@ docker compose exec app php artisan key:generate
 docker compose exec app php artisan migrate --seed
 ```
 
-Acesse **http://localhost:8000** e entre com uma das contas de demonstração abaixo.
+Acesse **http://localhost:8000**.
 
-O container `node` executa `npm install` automaticamente ao subir; na primeira
-vez pode levar alguns minutos até o Vite ficar disponível
-(`docker compose logs -f node`). O `scheduler` reinicia sozinho até que o
-`composer install` tenha sido executado.
+- O container `node` executa `npm install` ao subir; na primeira vez o Vite pode levar
+  alguns minutos para ficar disponível (`docker compose logs -f node`).
+- O `scheduler` reinicia sozinho até o `composer install` terminar.
+- Se uma porta estiver ocupada, ajuste `APP_PORT`, `VITE_PORT` ou `FORWARD_DB_PORT`
+  no `.env` (e `APP_URL`/`SANCTUM_STATEFUL_DOMAINS` junto com `APP_PORT`).
 
-## Dados de demonstração
+### Usuários de demonstração
 
-`php artisan migrate --seed` (ou `migrate:fresh --seed` para recriar tudo) gera
-dados fictícios coerentes, com datas relativas ao dia da execução: cerca de 180
-apólices em todos os status, coberturas, parcelas pagas, a vencer e atrasadas,
-apólices vencendo nos próximos 30 dias e sinistros com histórico de status.
+Os seeders criam dados **fictícios** (cerca de 180 apólices, parcelas, sinistros e
+histórico) com datas relativas ao dia da execução, e três contas de demonstração:
 
 | Perfil | E-mail |
 |---|---|
@@ -71,357 +150,94 @@ apólices vencendo nos próximos 30 dias e sinistros com histórico de status.
 | Corretor | `corretor@insureflow.test` |
 | Assistente | `assistente@insureflow.test` |
 
-A senha é o valor de `SEED_DEFAULT_PASSWORD` no `.env`. Os seeders se recusam a
-rodar com `APP_ENV=production`.
+A senha é o valor de `SEED_DEFAULT_PASSWORD` no seu `.env` (o `.env.example` traz um
+valor padrão apenas para uso local). Os seeders se recusam a rodar com
+`APP_ENV=production`.
 
-## Modelo de dados
-
-```
-clients ──1:N──> policies <──N:1── insurers
-                   │  ^  ^
-                   │  │  └──N:1── insurance_products
-                   │  └──N:1── users (broker_id)
-                   ├──1:N──> coverages
-                   ├──1:N──> installments
-                   └──1:N──> claims ──1:N──> claim_status_histories
-
-activity_logs ──polimórfica──> qualquer entidade auditável
-```
-
-Invariantes garantidas pelo próprio PostgreSQL:
-
-- valores monetários em `decimal(12,2)` e CHECKs contra valores negativos;
-- vigência válida (`ends_on > starts_on`) e sinistro comunicado após a ocorrência;
-- `commission_amount` é coluna gerada a partir de `premium × commission_rate`;
-- parcela paga se e somente se houver data de pagamento; "atrasado" não é gravado,
-  é derivado (pendente com vencimento passado);
-- sinistro aprovado exige valor aprovado, negado não pode tê-lo;
-- CPF/CNPJ coerente com o tipo de pessoa e únicos entre registros não excluídos;
-- `claim_status_histories` e `activity_logs` são somente inserção (trigger).
-
-## Arquitetura do backend
-
-```
-Requisição -> Form Request (autoriza + valida) -> Controller (fino)
-          -> Service (regras de negócio, quando existem) -> Model/Eloquent
-          -> API Resource (formato JSON)
-```
-
-| Camada | Onde | Responsabilidade |
-|---|---|---|
-| Form Requests | `app/Http/Requests` | Validação, normalização (CPF/CNPJ, telefones e CEP só com dígitos) e autorização de escrita |
-| Policies | `app/Policies` | Quem pode fazer o quê, por perfil |
-| Services | `app/Services` | `PolicyService` (ciclo de vida da apólice), `ClaimService` (abertura e fluxo de sinistros), `DashboardService` (indicadores) |
-| Enums | `app/Enums` | Status, transições permitidas e rótulos em português |
-| Resources | `app/Http/Resources` | Formato das respostas; enums como `{value, label}`, dinheiro como string decimal |
-| Auditoria | `app/Models/Concerns/HasActivityLog.php` | Grava `activity_logs` automaticamente pelos eventos dos models |
-
-CRUDs sem regra própria (clientes, seguradoras, modalidades, usuários) não têm
-Service: o controller usa o model diretamente.
-
-## Autenticação
-
-Sanctum em modo SPA: sessão em cookie **HttpOnly** + proteção **CSRF**. Nenhum
-token é exposto ao JavaScript.
-
-1. `GET /sanctum/csrf-cookie` — o servidor devolve o cookie `XSRF-TOKEN`.
-2. `POST /api/login` com `{email, password, remember?}` enviando o header
-   `X-XSRF-TOKEN` (o Axios faz isso automaticamente com `withXSRFToken: true`).
-3. As demais requisições enviam o cookie de sessão e o header `X-XSRF-TOKEN`.
-4. `POST /api/logout` invalida a sessão.
-
-- Credenciais inválidas e e-mail inexistente recebem a mesma mensagem (422).
-- Usuários inativos ou excluídos não autenticam; um usuário desativado com sessão
-  aberta é desconectado na requisição seguinte (403).
-- O login é limitado a 5 tentativas por minuto por e-mail + IP (429).
-- `GET /api/user` retorna o usuário autenticado e o mapa `permissions`, calculado
-  pelas Policies, para a SPA decidir o que exibir.
-
-## Perfis e permissões
-
-| Ação | Admin | Corretor | Assistente |
-|---|:-:|:-:|:-:|
-| Consultar todos os módulos e o dashboard | ✓ | ✓ | ✓ |
-| Criar/editar clientes | ✓ | ✓ | ✓ |
-| Excluir clientes | ✓ | ✓ | — |
-| Seguradoras e modalidades (criar, editar, excluir) | ✓ | — | — |
-| Apólices e coberturas (criar, editar, mudar status) | ✓ | ✓ | — |
-| Excluir apólices (somente cotações) | ✓ | — | — |
-| Registrar pagamento de parcelas | ✓ | ✓ | ✓ |
-| Sinistros (abrir, editar, mudar status) | ✓ | ✓ | ✓ |
-| Excluir sinistros | ✓ | — | — |
-| Usuários e auditoria de usuários | ✓ | — | — |
-
-## Regras de negócio
-
-**Apólices**
-- Nascem como cotação, pendente ou ativa; os demais status só por transição
-  (`PolicyStatus::allowedTransitions()`): cotação → pendente → ativa ⇄ suspensa;
-  ativa/suspensa → expirada; qualquer status não final → cancelada.
-- Ativa exige vigência não encerrada; expirada exige vigência encerrada.
-- Parcelas são geradas ao sair de cotação: prêmio dividido em centavos, diferença
-  de arredondamento na 1ª parcela, vencimentos mensais a partir do início da vigência.
-- Alterar prêmio, quantidade de parcelas ou início da vigência regenera as parcelas
-  se nenhuma foi paga; caso contrário a alteração é recusada.
-- Cancelar a apólice cancela as parcelas pendentes (as pagas são mantidas).
-- Canceladas e expiradas só aceitam alteração de observações; só cotações podem ser excluídas.
-- A comissão é calculada pelo banco (`commission_amount`, coluna gerada).
-
-**Parcelas** — "atrasada" é derivada (pendente com vencimento passado), nunca
-gravada. Apenas parcelas pendentes podem ser pagas, com data de pagamento até hoje.
-
-**Sinistros**
-- Apólice ativa, ou expirada se a ocorrência foi durante a vigência; a ocorrência
-  deve estar dentro da vigência e não pode ser futura.
-- Protocolo sequencial por ano (`SIN-2026-000042`), gerado sob advisory lock.
-- Transições por `ClaimStatus::allowedTransitions()`; cada mudança grava
-  `claim_status_histories`. Aprovar exige `approved_amount`; negar o remove.
-- Sinistros encerrados não podem ser editados.
-
-**Exclusões** — clientes, seguradoras e modalidades com apólices em andamento
-não podem ser excluídos (apenas inativados). Todas as exclusões são lógicas.
-
-**Auditoria** — criação, alteração, exclusão, restauração e mudança de status das
-entidades de negócio são gravadas em `activity_logs` com o usuário autenticado
-(ou nulo quando a origem é o sistema). Apenas campos alterados são guardados;
-senhas e tokens nunca.
-
-**Expiração automática** — `php artisan policies:expire` roda diariamente às
-00:05 (container `scheduler`), expira apólices ativas/suspensas com vigência
-encerrada e é idempotente.
-
-## API
-
-Todas as rotas abaixo exigem autenticação, exceto `/api/health` e `/api/login`.
-
-| Método | Rota | Descrição |
-|---|---|---|
-| GET | `/api/health` | Verificação da aplicação e do banco |
-| POST | `/api/login` · `/api/logout` | Autenticação |
-| GET | `/api/user` | Usuário autenticado + permissões |
-| GET, POST | `/api/clients` | Listar / criar clientes |
-| GET, PUT, DELETE | `/api/clients/{id}` | Detalhe (com apólices) / editar / excluir |
-| GET, POST | `/api/insurers` | Listar / criar seguradoras |
-| GET, PUT, DELETE | `/api/insurers/{id}` | Detalhe / editar / excluir |
-| GET, POST | `/api/insurance-products` | Listar / criar modalidades |
-| GET, PUT, DELETE | `/api/insurance-products/{id}` | Detalhe / editar / excluir |
-| GET, POST | `/api/policies` | Listar / criar apólices (com coberturas opcionais) |
-| GET, PATCH, DELETE | `/api/policies/{id}` | Detalhe completo / editar / excluir cotação |
-| PATCH | `/api/policies/{id}/status` | Transição de status `{status}` |
-| GET, POST | `/api/policies/{id}/coverages` | Coberturas da apólice |
-| GET, PUT, DELETE | `/api/coverages/{id}` | Detalhe / editar / excluir cobertura |
-| GET | `/api/installments` | Parcelas (financeiro) |
-| GET | `/api/installments/{id}` | Detalhe da parcela |
-| POST | `/api/installments/{id}/payment` | Registrar pagamento `{paid_on}` |
-| GET, POST | `/api/claims` | Listar / abrir sinistros |
-| GET, PATCH, DELETE | `/api/claims/{id}` | Detalhe (com histórico) / editar / excluir |
-| PATCH | `/api/claims/{id}/status` | Transição `{status, approved_amount?, notes?}` |
-| GET, POST | `/api/users` | Usuários (somente admin) |
-| GET, PUT, DELETE | `/api/users/{id}` | Detalhe / editar / excluir usuário |
-| GET | `/api/activity-logs` | Auditoria (`subject_type`, `subject_id`, `user_id`, `action`) |
-| GET | `/api/dashboard` | Indicadores (`expiring_within_days`, padrão 30) |
-| GET | `/api/options` | Valores e rótulos dos enums e UFs |
-
-**Listagens** são paginadas (`per_page`, até 100) e aceitam `sort=campo` ou
-`sort=-campo` (apenas colunas permitidas). Principais filtros:
-
-| Recurso | Filtros |
-|---|---|
-| clients | `search` (nome, e-mail, documento), `person_type`, `is_active`, `state`, `city` |
-| insurers / insurance-products | `search`, `is_active` |
-| policies | `search` (número, cliente), `status`, `client_id`, `insurer_id`, `insurance_product_id`, `broker_id`, `expiring_within_days` |
-| installments | `status` (inclui `overdue`), `policy_id`, `client_id`, `due_from`, `due_until` |
-| claims | `search` (protocolo, apólice, cliente), `status`, `open`, `policy_id`, `client_id`, `occurred_from`, `occurred_until` |
-| users | `search`, `role`, `is_active` |
-
-**Formato das respostas**
-
-```jsonc
-// sucesso: recurso único
-{ "data": { "id": 1, "status": { "value": "active", "label": "Ativa" }, "premium": "1234.56" } }
-
-// sucesso: listagem paginada
-{ "data": [ ... ], "links": { ... }, "meta": { "current_page": 1, "total": 180, "per_page": 15 } }
-
-// erro de validação ou de regra de negócio (422)
-{ "message": "Os dados informados são inválidos.", "errors": { "document": ["O CPF informado é inválido."] } }
-
-// demais erros (401, 403, 404, 405, 419, 429, 500)
-{ "message": "Recurso não encontrado." }
-```
-
-Criação retorna **201**, exclusão **204**. Mensagens são em português e nunca
-expõem classes, SQL ou stack traces (com `APP_DEBUG=false`).
-
-**O que o frontend pode fazer com cada registro** também vem da API, para que o Vue
-não replique regras do backend:
-
-| Campo | Onde | Significado |
-|---|---|---|
-| `allowed_transitions` | apólices, sinistros | Status para os quais o registro pode ir agora |
-| `is_editable` | apólices, sinistros | Se ainda aceita edição (não está em estado final) |
-| `is_deletable` | apólices | Se pode ser excluída (somente cotações) |
-| `is_payable` | parcelas | Se o pagamento pode ser registrado |
-| `permissions` | `/api/user` | O que o perfil do usuário permite |
-
-## Frontend
-
-SPA em Vue 3 (JavaScript, Composition API) servida pelo próprio Laravel.
-
-| Pasta (`resources/js`) | Responsabilidade |
-|---|---|
-| `api/` | Único ponto de acesso HTTP: Axios configurado para Sanctum (CSRF, sessão), conversão de erros em `ApiError` e funções por recurso |
-| `stores/` | Pinia: sessão (`/api/user`), opções (`/api/options`), notificações e diálogo de confirmação |
-| `composables/` | `useForm` (erros 422 por campo, bloqueio de envio duplo), `usePaginatedList` (filtros/ordenação/página na URL), `useAsyncData`, listas para selects |
-| `router/` | Rotas por módulo e guards (login, `meta.permission` com as chaves do backend) |
-| `layouts/` | Layout autenticado: sidebar (gaveta no mobile), header, logout |
-| `components/` | `ui/` (botões, modal, estados), `form/` (campos acessíveis, dinheiro, máscaras, busca remota), `data/` (tabela, paginação, busca) e componentes por módulo |
-| `pages/` | Uma página por tela, organizadas por módulo |
-| `utils/` | Formatação pt-BR (datas sem deslocamento de fuso, moeda, documentos) e máscaras |
-| `tests/` | Testes com Vitest + @vue/test-utils |
-
-**Princípios**
-
-- Nenhum componente usa o Axios diretamente; toda chamada passa por `api/`.
-- A sessão vive no cookie HttpOnly do Laravel. Nada de autenticação é salvo no
-  navegador; o usuário e suas permissões vêm sempre de `/api/user`.
-- Sessão expirada (401 durante o uso) limpa o estado e volta ao login com
-  `?redirect=` para retornar à mesma página. Um 419 (CSRF) renova o cookie e repete
-  a requisição uma vez.
-- Rótulos de enums, UFs, nomes de entidades e de campos vêm de `/api/options`.
-- Listagens nunca filtram ou ordenam no navegador: os filtros ficam na URL e são
-  enviados à API.
-- Erros 422 aparecem no campo correspondente e em um alerta no topo do formulário;
-  403, 404, 500 e falhas de rede têm mensagens próprias.
-- Operações destrutivas e transições de status pedem confirmação.
-
-**Telas**
-
-| Rota | Tela | Permissão |
-|---|---|---|
-| `/login` | Login | — |
-| `/` | Dashboard | — |
-| `/clients`, `/clients/:id` | Clientes e detalhe (apólices, histórico) | — |
-| `/clients/new`, `/clients/:id/edit` | Cadastro e edição de cliente | `clients.create` / `clients.update` |
-| `/insurers`, `/insurers/:id` | Seguradoras | — |
-| `/insurers/new`, `/insurers/:id/edit` | Cadastro e edição de seguradora | `insurers.manage` |
-| `/insurance-products` | Modalidades (cadastro em modal) | edição: `insurance_products.manage` |
-| `/policies`, `/policies/:id` | Apólices e visão central da apólice | — |
-| `/policies/new`, `/policies/:id/edit` | Cadastro e edição de apólice | `policies.manage` |
-| `/installments` | Consulta financeira de parcelas | pagamento: `installments.pay` |
-| `/claims`, `/claims/:id` | Sinistros e detalhe com histórico de status | — |
-| `/claims/new` | Abertura de sinistro | `claims.manage` |
-| `/users` | Usuários | `users.manage` |
-| `/activity-logs` | Auditoria | `activity_logs.view` |
-
-## Comandos do dia a dia
+## Testes
 
 ```bash
-docker compose up -d                           # sobe o ambiente
-docker compose down                            # para o ambiente (mantém o banco)
-docker compose down -v                         # para e APAGA o volume do banco
+docker compose exec app php artisan test    # backend (PHPUnit, banco insureflow_test)
+docker compose exec node npm test           # frontend (Vitest)
+docker compose exec node npm run build      # build de produção
+docker compose exec app vendor/bin/pint --test   # estilo de código PHP
+```
 
-docker compose exec app php artisan migrate    # migrations
-docker compose exec app php artisan test       # testes (banco insureflow_test)
-docker compose exec app php artisan policies:expire   # expiração manual (normalmente via scheduler)
-docker compose exec app php artisan route:list --path=api   # rotas da API
-docker compose exec app composer require ...   # dependências PHP
-docker compose exec node npm install ...       # dependências JS
-docker compose exec node npm run build         # build de produção dos assets
-docker compose exec node npm test              # testes do frontend (Vitest)
+| Suíte | Resultado atual | O que cobre |
+|---|---|---|
+| Backend | **208 testes, 1149 asserções** | Constraints do PostgreSQL, regras de negócio, cada endpoint, autenticação, matriz de autorização por perfil, mass assignment, auditoria, scheduler, número de queries (N+1) |
+| Frontend | **58 testes** | Cliente HTTP (401/419/422), guards, formulários, listagens, transições de status, pagamento de parcela, estados de erro/vazio, acessibilidade (foco, rótulos, modal) |
 
-docker compose logs -f app node                # logs
+Os testes do backend rodam em um banco PostgreSQL separado, criado automaticamente
+na primeira inicialização, para exercitar as constraints reais.
+
+## Comandos úteis
+
+```bash
+docker compose up -d                                   # sobe o ambiente
+docker compose down                                    # para (mantém o banco)
+docker compose down -v                                 # para e APAGA os volumes
+docker compose exec app php artisan migrate:fresh --seed   # recria o banco com dados de demonstração
+docker compose exec app php artisan route:list --path=api  # rotas da API
+docker compose exec app php artisan schedule:list      # tarefas agendadas
+docker compose exec app php artisan policies:expire    # expiração manual
+docker compose exec node npm install <pacote>          # dependências JS
+docker compose logs -f app node                        # logs
 ```
 
 ## Configuração
 
-Todas as configurações ficam no `.env` (nunca versionado). Variáveis relevantes
-para o ambiente Docker:
+Tudo fica no `.env`, que nunca é versionado. Variáveis do ambiente Docker:
 
 | Variável | Padrão | Uso |
 |---|---|---|
-| `APP_PORT` | `8000` | Porta HTTP da aplicação no host |
+| `APP_PORT` | `8000` | Porta HTTP no host |
 | `VITE_PORT` | `5173` | Porta do Vite no host |
 | `FORWARD_DB_PORT` | `5433` | Porta do PostgreSQL no host (para clientes como DBeaver) |
-| `DB_PASSWORD` | `change-me-local-only` | Senha do banco local; obrigatória |
-| `HOST_UID` / `HOST_GID` | `1000` | Usuário dos containers PHP (relevante em hosts Linux) |
+| `DB_PASSWORD` | `change-me-local-only` | Senha do banco local |
+| `HOST_UID` / `HOST_GID` | `1000` | Usuário dos containers PHP (relevante em Linux) |
 | `VITE_USE_POLLING` | `true` | Detecção de alterações em bind mounts do Windows/macOS |
-| `SEED_DEFAULT_PASSWORD` | `password` | Senha dos usuários de demonstração (somente desenvolvimento) |
+| `SEED_DEFAULT_PASSWORD` | `password` | Senha das contas de demonstração (somente local) |
 
-Se alterar `APP_PORT`, ajuste também `APP_URL` e `SANCTUM_STATEFUL_DOMAINS`.
-
-## Testes
-
-Os testes rodam no PostgreSQL (banco `insureflow_test`, criado automaticamente na
-primeira inicialização do volume), para validar constraints e tipos reais do banco.
-
-```bash
-docker compose exec app php artisan test
-docker compose exec app php artisan test --filter=PolicyApiTest   # um arquivo específico
-```
-
-| Pasta | Cobertura |
-|---|---|
-| `tests/Unit` | Enums (transições), cálculo de parcelas, CPF/CNPJ |
-| `tests/Feature/Auth` | Login, logout, conta inativa, rate limit, permissões por perfil |
-| `tests/Feature/Api` | Endpoints de cada módulo: CRUD, filtros, validação, regras de negócio, autorização, formato de erros, dashboard |
-| `tests/Feature/Database` | Constraints do PostgreSQL, relacionamentos, auditoria, seeders, fuso horário |
-| `tests/Feature/Console` | Expiração automática de apólices e agendamento |
-
-**Frontend** (Vitest + @vue/test-utils em jsdom, com a API simulada):
-
-```bash
-docker compose exec node npm test
-```
-
-| Arquivo (`resources/js/tests`) | Cobertura |
-|---|---|
-| `http`, `router`, `useForm`, `utils` | Cliente HTTP (401, 419, 422, rede), guards e redirect, formulários, formatação e máscaras |
-| `components`, `SidebarNav` | Acessibilidade dos campos, tabela (ordenação), modal (foco, Esc), menu por permissão |
-| `DashboardPage`, `clients`, `catalog`, `policies`, `claims`, `admin` | Listagens, filtros na URL, formulários com 422, transições de status, pagamento de parcela, estados de carregamento/erro/vazio e visibilidade por permissão |
+O que muda para produção está em [docs/architecture.md](docs/architecture.md#produção).
 
 ## Estrutura do projeto
 
 ```
 ├── app/
 │   ├── Console/Commands/     # policies:expire
-│   ├── Enums/                # status, perfis, formas de pagamento
+│   ├── Enums/                # status, transições, perfis
 │   ├── Exceptions/           # formato padronizado de erros da API
 │   ├── Http/                 # Controllers/Api, Requests, Resources, Middleware
 │   ├── Models/               # Eloquent + Concerns (auditoria, append-only)
 │   ├── Policies/             # autorização por perfil
 │   ├── Rules/                # CPF e CNPJ
 │   ├── Services/             # regras de negócio (apólices, sinistros, dashboard)
-│   └── Support/              # InstallmentSchedule, UFs
-├── lang/pt_BR/               # mensagens de validação e da API
-├── docker/
-│   ├── nginx/default.conf
-│   ├── node/Dockerfile       # Node 22 com node_modules em volume nomeado
-│   ├── php/Dockerfile        # PHP-FPM 8.4 + extensões + Composer
-│   └── postgres/             # script de criação do banco de testes
-├── resources/
-│   ├── css/app.css           # Tailwind + tokens de cor da marca
-│   ├── js/                   # SPA Vue (ver seção Frontend)
-│   │   ├── api/  components/  composables/  layouts/  pages/
-│   │   ├── router/  stores/  tests/  utils/
-│   └── views/app.blade.php   # shell HTML da SPA
-├── routes/{api,web}.php
-├── tests/
+│   └── Support/              # cálculo de parcelas, UFs
+├── database/                 # migrations, factories, seeders
+├── docker/                   # nginx, PHP-FPM, Node, script do PostgreSQL
+├── docs/                     # arquitetura, domínio, API, screenshots
+├── lang/pt_BR/               # mensagens da API e de validação
+├── resources/js/             # SPA Vue (api, stores, composables, components, pages...)
+├── routes/                   # api.php, web.php, console.php (agendamentos)
+├── tests/                    # PHPUnit (Unit, Feature/*)
 └── compose.yaml
 ```
 
+## Documentação
+
+- [Arquitetura e decisões](docs/architecture.md): camadas, banco, frontend, Docker,
+  segurança, produção e limitações conhecidas.
+- [Domínio e regras de negócio](docs/domain-rules.md): entidades, transições, parcelas,
+  sinistros, auditoria e onde cada regra é garantida.
+- [API](docs/api.md): autenticação, perfis, rotas, filtros e formato das respostas.
+
 ## Notas para Windows
 
-- O projeto funciona a partir de qualquer drive (ex.: `E:\`). Se a performance do
-  bind mount incomodar, clone o repositório dentro do sistema de arquivos do WSL2.
-- Os finais de linha são normalizados para LF pelo `.gitattributes`; scripts shell
-  com CRLF quebram dentro dos containers Linux.
-- Se alguma porta estiver ocupada, altere `APP_PORT`, `VITE_PORT` ou
-  `FORWARD_DB_PORT` no `.env`.
-- O `node_modules` fica em um volume do Docker (`node-modules`), fora do bind mount:
-  ler milhares de arquivos pelo bind mount do Windows deixava o Vite e os testes
-  muito lentos. Por isso ele não aparece na pasta do projeto; instale pacotes com
-  `docker compose exec node npm install <pacote>`.
-- Pelo mesmo motivo, o Vite vigia apenas `resources/` e `routes/` (polling a cada
-  1s) e o opcache revalida os arquivos PHP a cada 2s: uma alteração de código pode
-  levar até 2s para valer.
+- O projeto funciona a partir de qualquer drive. Para o melhor desempenho, clone-o
+  dentro do sistema de arquivos do WSL2.
+- O `node_modules` fica em um volume do Docker, fora da pasta do projeto: instale
+  pacotes com `docker compose exec node npm install <pacote>`.
+- O Vite verifica alterações a cada 1 s e o PHP revalida arquivos a cada 2 s, então uma
+  edição de código pode levar até 2 s para valer.
+- Os finais de linha são normalizados para LF pelo `.gitattributes`.
