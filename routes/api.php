@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\ClaimController;
 use App\Http\Controllers\Api\ClaimStatusController;
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\CoverageController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\HealthCheckController;
 use App\Http\Controllers\Api\InstallmentController;
 use App\Http\Controllers\Api\InsuranceProductController;
@@ -42,4 +43,5 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::apiResource('users', UserController::class);
     Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
     Route::get('/options', OptionsController::class)->name('options');
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
 });
