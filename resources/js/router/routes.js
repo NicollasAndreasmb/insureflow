@@ -84,6 +84,8 @@ export const routes = [
                 meta: { title: 'Editar apólice', permission: 'policies.manage' },
             },
 
+            { path: 'installments', name: 'installments.index', component: () => import('@/pages/installments/InstallmentListPage.vue'), meta: { title: 'Parcelas' } },
+
             { path: 'insurance-products', name: 'products.index', component: () => import('@/pages/products/ProductListPage.vue'), meta: { title: 'Modalidades' } },
 
             { path: 'forbidden', name: 'forbidden', component: () => import('@/pages/errors/ForbiddenPage.vue'), meta: { title: 'Acesso negado' } },
