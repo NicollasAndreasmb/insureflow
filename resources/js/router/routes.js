@@ -40,6 +40,29 @@ export const routes = [
                 meta: { title: 'Editar cliente', permission: 'clients.update' },
             },
 
+            { path: 'insurers', name: 'insurers.index', component: () => import('@/pages/insurers/InsurerListPage.vue'), meta: { title: 'Seguradoras' } },
+            {
+                path: 'insurers/new',
+                name: 'insurers.create',
+                component: () => import('@/pages/insurers/InsurerFormPage.vue'),
+                meta: { title: 'Nova seguradora', permission: 'insurers.manage' },
+            },
+            {
+                path: 'insurers/:id(\\d+)',
+                name: 'insurers.show',
+                component: () => import('@/pages/insurers/InsurerDetailPage.vue'),
+                props: true,
+                meta: { title: 'Seguradora' },
+            },
+            {
+                path: 'insurers/:id(\\d+)/edit',
+                name: 'insurers.edit',
+                component: () => import('@/pages/insurers/InsurerFormPage.vue'),
+                props: true,
+                meta: { title: 'Editar seguradora', permission: 'insurers.manage' },
+            },
+
+
             { path: 'forbidden', name: 'forbidden', component: () => import('@/pages/errors/ForbiddenPage.vue'), meta: { title: 'Acesso negado' } },
             { path: ':pathMatch(.*)*', name: 'not-found', component: () => import('@/pages/errors/NotFoundPage.vue'), meta: { title: 'Página não encontrada' } },
         ],
