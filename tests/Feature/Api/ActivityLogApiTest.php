@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Enums\UserRole;
 use App\Models\Client;
+use App\Models\Policy;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -45,6 +46,18 @@ class ActivityLogApiTest extends TestCase
 
         $this->actingAsRole(UserRole::Admin);
         $this->getJson("/api/activity-logs?subject_type=user&subject_id={$user->id}")->assertOk()->assertJsonCount(1, 'data');
+    }
+
+    public function test_filters_by_subject_type_alone(): void
+    {
+        $this->actingAsRole(UserRole::Assistant);
+        Client::factory()->count(2)->create();
+        Policy::factory()->create();
+
+        $response = $this->getJson('/api/activity-logs?subject_type=client')->assertOk();
+
+        $this->assertSame(['client'], array_values(array_unique(array_column($response->json('data'), 'subject_type'))));
+        $this->assertCount(Client::count(), $response->json('data'));
     }
 
     public function test_rejects_unknown_subject_types(): void

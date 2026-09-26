@@ -17,7 +17,7 @@ class ListActivityLogsRequest extends ListRequest
     {
         return [
             'subject_type' => ['sometimes', Rule::in(array_keys(Relation::morphMap()))],
-            'subject_id' => ['sometimes', 'integer', 'required_with:subject_type'],
+            'subject_id' => ['sometimes', 'integer'],
             'user_id' => ['sometimes', 'integer'],
             'action' => ['sometimes', Rule::enum(ActivityAction::class)],
         ];
