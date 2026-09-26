@@ -97,6 +97,9 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Timestamps são gravados sem offset no fuso da aplicação; a sessão do
+            // PostgreSQL precisa usar o mesmo fuso para interpretá-los corretamente.
+            'timezone' => env('APP_TIMEZONE', 'UTC'),
         ],
 
         'sqlsrv' => [
