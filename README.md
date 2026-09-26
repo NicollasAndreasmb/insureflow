@@ -3,9 +3,9 @@
 Sistema web de gestão para corretoras de seguros: clientes, seguradoras, modalidades,
 apólices, coberturas, parcelas, sinistros e dashboard de indicadores.
 
-> **Status:** Fases 1 (fundação) e 2 (banco de dados) concluídas. Os módulos de negócio serão adicionados
-> incrementalmente. A documentação completa (arquitetura, endpoints, screenshots)
-> será expandida ao longo do desenvolvimento.
+> **Status:** Fases 1 (fundação), 2 (banco de dados) e 3 (backend e API) concluídas.
+> A API REST está completa e testada; as telas Vue dos módulos ainda não foram
+> construídas (a SPA exibe apenas a página de verificação do ambiente).
 
 ## Stack
 
@@ -100,6 +100,160 @@ Invariantes garantidas pelo próprio PostgreSQL:
 - CPF/CNPJ coerente com o tipo de pessoa e únicos entre registros não excluídos;
 - `claim_status_histories` e `activity_logs` são somente inserção (trigger).
 
+## Arquitetura do backend
+
+```
+Requisição -> Form Request (autoriza + valida) -> Controller (fino)
+          -> Service (regras de negócio, quando existem) -> Model/Eloquent
+          -> API Resource (formato JSON)
+```
+
+| Camada | Onde | Responsabilidade |
+|---|---|---|
+| Form Requests | `app/Http/Requests` | Validação, normalização (CPF/CNPJ, telefones e CEP só com dígitos) e autorização de escrita |
+| Policies | `app/Policies` | Quem pode fazer o quê, por perfil |
+| Services | `app/Services` | `PolicyService` (ciclo de vida da apólice), `ClaimService` (abertura e fluxo de sinistros), `DashboardService` (indicadores) |
+| Enums | `app/Enums` | Status, transições permitidas e rótulos em português |
+| Resources | `app/Http/Resources` | Formato das respostas; enums como `{value, label}`, dinheiro como string decimal |
+| Auditoria | `app/Models/Concerns/HasActivityLog.php` | Grava `activity_logs` automaticamente pelos eventos dos models |
+
+CRUDs sem regra própria (clientes, seguradoras, modalidades, usuários) não têm
+Service: o controller usa o model diretamente.
+
+## Autenticação
+
+Sanctum em modo SPA: sessão em cookie **HttpOnly** + proteção **CSRF**. Nenhum
+token é exposto ao JavaScript.
+
+1. `GET /sanctum/csrf-cookie` — o servidor devolve o cookie `XSRF-TOKEN`.
+2. `POST /api/login` com `{email, password, remember?}` enviando o header
+   `X-XSRF-TOKEN` (o Axios faz isso automaticamente com `withXSRFToken: true`).
+3. As demais requisições enviam o cookie de sessão e o header `X-XSRF-TOKEN`.
+4. `POST /api/logout` invalida a sessão.
+
+- Credenciais inválidas e e-mail inexistente recebem a mesma mensagem (422).
+- Usuários inativos ou excluídos não autenticam; um usuário desativado com sessão
+  aberta é desconectado na requisição seguinte (403).
+- O login é limitado a 5 tentativas por minuto por e-mail + IP (429).
+- `GET /api/user` retorna o usuário autenticado e o mapa `permissions`, calculado
+  pelas Policies, para a SPA decidir o que exibir.
+
+## Perfis e permissões
+
+| Ação | Admin | Corretor | Assistente |
+|---|:-:|:-:|:-:|
+| Consultar todos os módulos e o dashboard | ✓ | ✓ | ✓ |
+| Criar/editar clientes | ✓ | ✓ | ✓ |
+| Excluir clientes | ✓ | ✓ | — |
+| Seguradoras e modalidades (criar, editar, excluir) | ✓ | — | — |
+| Apólices e coberturas (criar, editar, mudar status) | ✓ | ✓ | — |
+| Excluir apólices (somente cotações) | ✓ | — | — |
+| Registrar pagamento de parcelas | ✓ | ✓ | ✓ |
+| Sinistros (abrir, editar, mudar status) | ✓ | ✓ | ✓ |
+| Excluir sinistros | ✓ | — | — |
+| Usuários e auditoria de usuários | ✓ | — | — |
+
+## Regras de negócio
+
+**Apólices**
+- Nascem como cotação, pendente ou ativa; os demais status só por transição
+  (`PolicyStatus::allowedTransitions()`): cotação → pendente → ativa ⇄ suspensa;
+  ativa/suspensa → expirada; qualquer status não final → cancelada.
+- Ativa exige vigência não encerrada; expirada exige vigência encerrada.
+- Parcelas são geradas ao sair de cotação: prêmio dividido em centavos, diferença
+  de arredondamento na 1ª parcela, vencimentos mensais a partir do início da vigência.
+- Alterar prêmio, quantidade de parcelas ou início da vigência regenera as parcelas
+  se nenhuma foi paga; caso contrário a alteração é recusada.
+- Cancelar a apólice cancela as parcelas pendentes (as pagas são mantidas).
+- Canceladas e expiradas só aceitam alteração de observações; só cotações podem ser excluídas.
+- A comissão é calculada pelo banco (`commission_amount`, coluna gerada).
+
+**Parcelas** — "atrasada" é derivada (pendente com vencimento passado), nunca
+gravada. Apenas parcelas pendentes podem ser pagas, com data de pagamento até hoje.
+
+**Sinistros**
+- Apólice ativa, ou expirada se a ocorrência foi durante a vigência; a ocorrência
+  deve estar dentro da vigência e não pode ser futura.
+- Protocolo sequencial por ano (`SIN-2026-000042`), gerado sob advisory lock.
+- Transições por `ClaimStatus::allowedTransitions()`; cada mudança grava
+  `claim_status_histories`. Aprovar exige `approved_amount`; negar o remove.
+- Sinistros encerrados não podem ser editados.
+
+**Exclusões** — clientes, seguradoras e modalidades com apólices em andamento
+não podem ser excluídos (apenas inativados). Todas as exclusões são lógicas.
+
+**Auditoria** — criação, alteração, exclusão, restauração e mudança de status das
+entidades de negócio são gravadas em `activity_logs` com o usuário autenticado
+(ou nulo quando a origem é o sistema). Apenas campos alterados são guardados;
+senhas e tokens nunca.
+
+**Expiração automática** — `php artisan policies:expire` roda diariamente às
+00:05 (container `scheduler`), expira apólices ativas/suspensas com vigência
+encerrada e é idempotente.
+
+## API
+
+Todas as rotas abaixo exigem autenticação, exceto `/api/health` e `/api/login`.
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/health` | Verificação da aplicação e do banco |
+| POST | `/api/login` · `/api/logout` | Autenticação |
+| GET | `/api/user` | Usuário autenticado + permissões |
+| GET, POST | `/api/clients` | Listar / criar clientes |
+| GET, PUT, DELETE | `/api/clients/{id}` | Detalhe (com apólices) / editar / excluir |
+| GET, POST | `/api/insurers` | Listar / criar seguradoras |
+| GET, PUT, DELETE | `/api/insurers/{id}` | Detalhe / editar / excluir |
+| GET, POST | `/api/insurance-products` | Listar / criar modalidades |
+| GET, PUT, DELETE | `/api/insurance-products/{id}` | Detalhe / editar / excluir |
+| GET, POST | `/api/policies` | Listar / criar apólices (com coberturas opcionais) |
+| GET, PATCH, DELETE | `/api/policies/{id}` | Detalhe completo / editar / excluir cotação |
+| PATCH | `/api/policies/{id}/status` | Transição de status `{status}` |
+| GET, POST | `/api/policies/{id}/coverages` | Coberturas da apólice |
+| GET, PUT, DELETE | `/api/coverages/{id}` | Detalhe / editar / excluir cobertura |
+| GET | `/api/installments` | Parcelas (financeiro) |
+| GET | `/api/installments/{id}` | Detalhe da parcela |
+| POST | `/api/installments/{id}/payment` | Registrar pagamento `{paid_on}` |
+| GET, POST | `/api/claims` | Listar / abrir sinistros |
+| GET, PATCH, DELETE | `/api/claims/{id}` | Detalhe (com histórico) / editar / excluir |
+| PATCH | `/api/claims/{id}/status` | Transição `{status, approved_amount?, notes?}` |
+| GET, POST | `/api/users` | Usuários (somente admin) |
+| GET, PUT, DELETE | `/api/users/{id}` | Detalhe / editar / excluir usuário |
+| GET | `/api/activity-logs` | Auditoria (`subject_type`, `subject_id`, `user_id`, `action`) |
+| GET | `/api/dashboard` | Indicadores (`expiring_within_days`, padrão 30) |
+| GET | `/api/options` | Valores e rótulos dos enums e UFs |
+
+**Listagens** são paginadas (`per_page`, até 100) e aceitam `sort=campo` ou
+`sort=-campo` (apenas colunas permitidas). Principais filtros:
+
+| Recurso | Filtros |
+|---|---|
+| clients | `search` (nome, e-mail, documento), `person_type`, `is_active`, `state`, `city` |
+| insurers / insurance-products | `search`, `is_active` |
+| policies | `search` (número, cliente), `status`, `client_id`, `insurer_id`, `insurance_product_id`, `broker_id`, `expiring_within_days` |
+| installments | `status` (inclui `overdue`), `policy_id`, `client_id`, `due_from`, `due_until` |
+| claims | `search` (protocolo, apólice, cliente), `status`, `open`, `policy_id`, `client_id`, `occurred_from`, `occurred_until` |
+| users | `search`, `role`, `is_active` |
+
+**Formato das respostas**
+
+```jsonc
+// sucesso: recurso único
+{ "data": { "id": 1, "status": { "value": "active", "label": "Ativa" }, "premium": "1234.56" } }
+
+// sucesso: listagem paginada
+{ "data": [ ... ], "links": { ... }, "meta": { "current_page": 1, "total": 180, "per_page": 15 } }
+
+// erro de validação ou de regra de negócio (422)
+{ "message": "Os dados informados são inválidos.", "errors": { "document": ["O CPF informado é inválido."] } }
+
+// demais erros (401, 403, 404, 405, 419, 429, 500)
+{ "message": "Recurso não encontrado." }
+```
+
+Criação retorna **201**, exclusão **204**. Mensagens são em português e nunca
+expõem classes, SQL ou stack traces (com `APP_DEBUG=false`).
+
 ## Comandos do dia a dia
 
 ```bash
@@ -109,6 +263,8 @@ docker compose down -v                         # para e APAGA o volume do banco
 
 docker compose exec app php artisan migrate    # migrations
 docker compose exec app php artisan test       # testes (banco insureflow_test)
+docker compose exec app php artisan policies:expire   # expiração manual (normalmente via scheduler)
+docker compose exec app php artisan route:list --path=api   # rotas da API
 docker compose exec app composer require ...   # dependências PHP
 docker compose exec node npm install ...       # dependências JS
 docker compose exec node npm run build         # build de produção dos assets
@@ -140,12 +296,31 @@ primeira inicialização do volume), para validar constraints e tipos reais do b
 
 ```bash
 docker compose exec app php artisan test
+docker compose exec app php artisan test --filter=PolicyApiTest   # um arquivo específico
 ```
+
+| Pasta | Cobertura |
+|---|---|
+| `tests/Unit` | Enums (transições), cálculo de parcelas, CPF/CNPJ |
+| `tests/Feature/Auth` | Login, logout, conta inativa, rate limit, permissões por perfil |
+| `tests/Feature/Api` | Endpoints de cada módulo: CRUD, filtros, validação, regras de negócio, autorização, formato de erros, dashboard |
+| `tests/Feature/Database` | Constraints do PostgreSQL, relacionamentos, auditoria, seeders, fuso horário |
+| `tests/Feature/Console` | Expiração automática de apólices e agendamento |
 
 ## Estrutura do projeto
 
 ```
-├── app/                      # Backend Laravel (Controllers/Api, Models, Services…)
+├── app/
+│   ├── Console/Commands/     # policies:expire
+│   ├── Enums/                # status, perfis, formas de pagamento
+│   ├── Exceptions/           # formato padronizado de erros da API
+│   ├── Http/                 # Controllers/Api, Requests, Resources, Middleware
+│   ├── Models/               # Eloquent + Concerns (auditoria, append-only)
+│   ├── Policies/             # autorização por perfil
+│   ├── Rules/                # CPF e CNPJ
+│   ├── Services/             # regras de negócio (apólices, sinistros, dashboard)
+│   └── Support/              # InstallmentSchedule, UFs
+├── lang/pt_BR/               # mensagens de validação e da API
 ├── docker/
 │   ├── nginx/default.conf
 │   ├── php/Dockerfile        # PHP-FPM 8.4 + extensões + Composer
