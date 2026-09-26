@@ -1,58 +1,129 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# InsureFlow
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Sistema web de gestão para corretoras de seguros: clientes, seguradoras, modalidades,
+apólices, coberturas, parcelas, sinistros e dashboard de indicadores.
 
-## About Laravel
+> **Status:** Fase 1 (fundação) concluída. Os módulos de negócio serão adicionados
+> incrementalmente. A documentação completa (arquitetura, endpoints, screenshots)
+> será expandida ao longo do desenvolvimento.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| Camada | Tecnologia |
+|---|---|
+| Backend | Laravel 13 · PHP 8.4 · Sanctum (SPA, cookie + CSRF) |
+| Frontend | Vue 3 (Composition API) · Vue Router · Pinia · Axios · Tailwind CSS 4 · Vite |
+| Banco | PostgreSQL 17 |
+| Infra | Docker · Docker Compose |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Arquitetura resumida
 
-## Learning Laravel
+Uma única aplicação Laravel expõe a API REST em `/api/*` e entrega uma view que
+carrega a SPA Vue (`resources/js`). Qualquer outra URL é resolvida pelo Vue Router.
+A autenticação usa o Sanctum em modo SPA: sessão em cookie HttpOnly com proteção
+CSRF, sem tokens no `localStorage`.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Serviços Docker
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+| Serviço | Função | Porta no host |
+|---|---|---|
+| `web` | nginx, ponto de entrada HTTP | `8000` |
+| `app` | PHP-FPM executando o Laravel | — |
+| `scheduler` | `php artisan schedule:work` (tarefas agendadas) | — |
+| `postgres` | Banco de dados (`insureflow` e `insureflow_test`) | `5433` |
+| `node` | Servidor Vite com HMR | `5173` |
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## Requisitos
 
-## Agentic Development
+Somente **Docker** com **Docker Compose v2** (Docker Desktop no Windows/macOS).
+Não é necessário ter PHP, Composer, Node ou PostgreSQL instalados na máquina.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Instalação
 
 ```bash
-composer require laravel/boost --dev
+git clone <url-do-repositorio> insureflow
+cd insureflow
+cp .env.example .env
 
-php artisan boost:install
+docker compose up -d --build
+docker compose exec app composer install
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Acesse **http://localhost:8000**. A página inicial verifica se frontend, API e
+banco estão funcionando.
 
-## Contributing
+O container `node` executa `npm install` automaticamente ao subir; na primeira
+vez pode levar alguns minutos até o Vite ficar disponível
+(`docker compose logs -f node`). O `scheduler` reinicia sozinho até que o
+`composer install` tenha sido executado.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Comandos do dia a dia
 
-## Code of Conduct
+```bash
+docker compose up -d                           # sobe o ambiente
+docker compose down                            # para o ambiente (mantém o banco)
+docker compose down -v                         # para e APAGA o volume do banco
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+docker compose exec app php artisan migrate    # migrations
+docker compose exec app php artisan test       # testes (banco insureflow_test)
+docker compose exec app composer require ...   # dependências PHP
+docker compose exec node npm install ...       # dependências JS
+docker compose exec node npm run build         # build de produção dos assets
 
-## Security Vulnerabilities
+docker compose logs -f app node                # logs
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Configuração
 
-## License
+Todas as configurações ficam no `.env` (nunca versionado). Variáveis relevantes
+para o ambiente Docker:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Variável | Padrão | Uso |
+|---|---|---|
+| `APP_PORT` | `8000` | Porta HTTP da aplicação no host |
+| `VITE_PORT` | `5173` | Porta do Vite no host |
+| `FORWARD_DB_PORT` | `5433` | Porta do PostgreSQL no host (para clientes como DBeaver) |
+| `DB_PASSWORD` | `change-me-local-only` | Senha do banco local; obrigatória |
+| `HOST_UID` / `HOST_GID` | `1000` | Usuário dos containers PHP (relevante em hosts Linux) |
+| `VITE_USE_POLLING` | `true` | Detecção de alterações em bind mounts do Windows/macOS |
+
+Se alterar `APP_PORT`, ajuste também `APP_URL` e `SANCTUM_STATEFUL_DOMAINS`.
+
+## Testes
+
+Os testes rodam no PostgreSQL (banco `insureflow_test`, criado automaticamente na
+primeira inicialização do volume), para validar constraints e tipos reais do banco.
+
+```bash
+docker compose exec app php artisan test
+```
+
+## Estrutura do projeto
+
+```
+├── app/                      # Backend Laravel (Controllers/Api, Models, Services…)
+├── docker/
+│   ├── nginx/default.conf
+│   ├── php/Dockerfile        # PHP-FPM 8.4 + extensões + Composer
+│   └── postgres/             # script de criação do banco de testes
+├── resources/
+│   ├── css/app.css           # Tailwind + tokens de cor da marca
+│   ├── js/                   # SPA Vue
+│   │   ├── components/  composables/  layouts/  pages/
+│   │   ├── router/  services/  stores/  utils/
+│   └── views/app.blade.php   # shell HTML da SPA
+├── routes/{api,web}.php
+├── tests/
+└── compose.yaml
+```
+
+## Notas para Windows
+
+- O projeto funciona a partir de qualquer drive (ex.: `E:\`). Se a performance do
+  bind mount incomodar, clone o repositório dentro do sistema de arquivos do WSL2.
+- Os finais de linha são normalizados para LF pelo `.gitattributes`; scripts shell
+  com CRLF quebram dentro dos containers Linux.
+- Se alguma porta estiver ocupada, altere `APP_PORT`, `VITE_PORT` ou
+  `FORWARD_DB_PORT` no `.env`.
