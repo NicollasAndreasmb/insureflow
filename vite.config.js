@@ -47,7 +47,18 @@ export default defineConfig({
         },
         watch: {
             usePolling: process.env.VITE_USE_POLLING === 'true',
-            ignored: ['**/storage/framework/views/**', '**/vendor/**'],
+            interval: 1000,
+            binaryInterval: 3000,
+            ignored: [
+                '**/vendor/**',
+                '**/storage/**',
+                '**/bootstrap/**',
+                '**/database/**',
+                '**/tests/**',
+                '**/public/**',
+                '**/docker/**',
+                '**/.git/**',
+            ],
         },
     },
 });
