@@ -15,7 +15,7 @@ return new class extends Migration
     public function up(): void
     {
         DB::unprepared(<<<'SQL'
-            CREATE FUNCTION prevent_row_update() RETURNS trigger AS $$
+            CREATE OR REPLACE FUNCTION prevent_row_update() RETURNS trigger AS $$
             BEGIN
                 RAISE EXCEPTION 'Rows in table % are append-only and cannot be updated', TG_TABLE_NAME
                     USING ERRCODE = 'restrict_violation';
