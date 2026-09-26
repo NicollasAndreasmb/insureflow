@@ -32,3 +32,18 @@
     --color-accent-600: #0c947e;
     --color-accent-700: #0f7667;
 }
+
+@layer base {
+    [v-cloak] {
+        display: none;
+    }
+}
+
+@layer components {
+    .form-control {
+        @apply block w-full rounded-lg border-0 bg-white px-3 py-2 text-sm text-slate-900 shadow-xs ring-1 ring-slate-300 ring-inset placeholder:text-slate-400;
+        @apply focus:ring-2 focus:ring-brand-600 focus:outline-none;
+        @apply disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500;
+        @apply aria-invalid:ring-red-500 aria-invalid:focus:ring-red-600;
+    }
+}
