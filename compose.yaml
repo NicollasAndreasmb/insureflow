@@ -61,9 +61,9 @@ services:
         restart: unless-stopped
 
     node:
-        image: node:22-alpine
-        working_dir: /var/www/html
-        user: node
+        build:
+            context: ./docker/node
+        image: insureflow-node:dev
         command: ["sh", "-c", "npm install && npm run dev"]
         environment:
             VITE_USE_POLLING: ${VITE_USE_POLLING:-true}
@@ -71,7 +71,9 @@ services:
             - "${VITE_PORT:-5173}:5173"
         volumes:
             - ./:/var/www/html
+            - node-modules:/var/www/html/node_modules
         restart: unless-stopped
 
 volumes:
     postgres-data:
+    node-modules:
