@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ClaimController;
 use App\Http\Controllers\Api\ClaimStatusController;
@@ -10,7 +11,9 @@ use App\Http\Controllers\Api\InstallmentController;
 use App\Http\Controllers\Api\InsuranceProductController;
 use App\Http\Controllers\Api\InsurerController;
 use App\Http\Controllers\Api\PolicyController;
+use App\Http\Controllers\Api\OptionsController;
 use App\Http\Controllers\Api\PolicyStatusController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', HealthCheckController::class)->name('api.health');
@@ -35,4 +38,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
     Route::apiResource('claims', ClaimController::class);
     Route::patch('/claims/{claim}/status', ClaimStatusController::class)->name('claims.status');
+
+    Route::apiResource('users', UserController::class);
+    Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
+    Route::get('/options', OptionsController::class)->name('options');
 });
