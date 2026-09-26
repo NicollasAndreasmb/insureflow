@@ -7,13 +7,12 @@ use App\Enums\InstallmentStatus;
 use App\Enums\PolicyStatus;
 use App\Models\Claim;
 use App\Models\Client;
-use App\Models\InsuranceProduct;
 use App\Models\Installment;
+use App\Models\InsuranceProduct;
 use App\Models\Policy;
 use BackedEnum;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Indicadores do dashboard, calculados inteiramente no PostgreSQL.

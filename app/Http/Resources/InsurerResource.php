@@ -2,11 +2,12 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Insurer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin \App\Models\Insurer
+ * @mixin Insurer
  */
 class InsurerResource extends JsonResource
 {

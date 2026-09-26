@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Http\Resources\Concerns\SerializesEnums;
+use App\Models\Policy;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -10,7 +11,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * Valores monetários são serializados como string ("1234.56") para não perder
  * precisão em ponto flutuante; a formatação em R$ é responsabilidade do frontend.
  *
- * @mixin \App\Models\Policy
+ * @mixin Policy
  */
 class PolicyResource extends JsonResource
 {

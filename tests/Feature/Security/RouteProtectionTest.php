@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Security;
 
+use App\Enums\UserRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
@@ -36,7 +37,7 @@ class RouteProtectionTest extends TestCase
 
     public function test_non_numeric_or_out_of_range_identifiers_return_not_found(): void
     {
-        $this->actingAsRole(\App\Enums\UserRole::Admin);
+        $this->actingAsRole(UserRole::Admin);
 
         foreach (['/api/clients/abc', '/api/policies/99999999999999999999', '/api/claims/1.5', '/api/coverages/x', '/api/installments/-1'] as $uri) {
             $this->getJson($uri)

@@ -31,10 +31,6 @@ export class ApiError extends Error {
     get isNotFound() {
         return this.status === 404;
     }
-
-    get isForbidden() {
-        return this.status === 403;
-    }
 }
 
 const NETWORK_ERROR_MESSAGE = 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.';

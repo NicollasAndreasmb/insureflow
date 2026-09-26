@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Http\Resources\Concerns\SerializesEnums;
+use App\Models\Installment;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -10,7 +11,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * O status exposto é o efetivo (inclui "atrasado", que não é gravado no banco),
  * calculado por Installment::effectiveStatus().
  *
- * @mixin \App\Models\Installment
+ * @mixin Installment
  */
 class InstallmentResource extends JsonResource
 {

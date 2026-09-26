@@ -129,12 +129,6 @@ class Policy extends Model
     }
 
     #[Scope]
-    protected function active(Builder $query): void
-    {
-        $query->where('status', PolicyStatus::Active);
-    }
-
-    #[Scope]
     protected function expiringWithin(Builder $query, int $days): void
     {
         $query->where('status', PolicyStatus::Active)

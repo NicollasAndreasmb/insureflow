@@ -26,12 +26,4 @@ enum InstallmentStatus: string
             self::Cancelled => 'Cancelado',
         };
     }
-
-    /**
-     * @return list<self>
-     */
-    public static function persistable(): array
-    {
-        return [self::Pending, self::Paid, self::Cancelled];
-    }
 }

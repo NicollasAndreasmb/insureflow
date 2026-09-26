@@ -3,11 +3,12 @@
 namespace App\Http\Resources;
 
 use App\Http\Resources\Concerns\SerializesEnums;
+use App\Models\Claim;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin \App\Models\Claim
+ * @mixin Claim
  */
 class ClaimResource extends JsonResource
 {
