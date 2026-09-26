@@ -35,6 +35,8 @@ class AppServiceProvider extends ServiceProvider
      *
      * O limite de login é por e-mail + IP, para dificultar força bruta sem
      * bloquear outros usuários atrás do mesmo IP (ex.: rede do escritório).
+     * As rotas autenticadas têm um limite por usuário folgado para o uso da
+     * interface, mas que impede varreduras em massa com uma sessão válida.
      */
     public function boot(): void
     {
@@ -53,5 +55,8 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)
             ->by(Str::lower((string) $request->input('email')).'|'.$request->ip()));
+
+        RateLimiter::for('api', fn (Request $request) => Limit::perMinute(180)
+            ->by($request->user()?->id ?: $request->ip()));
     }
 }
