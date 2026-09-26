@@ -44,8 +44,13 @@ class User extends Authenticatable
         return $this->hasMany(ActivityLog::class);
     }
 
-    public function hasRole(UserRole $role): bool
+    public function hasRole(UserRole ...$roles): bool
     {
-        return $this->role === $role;
+        return in_array($this->role, $roles, true);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->hasRole(UserRole::Admin);
     }
 }

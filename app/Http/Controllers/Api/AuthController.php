@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Http\Resources\UserResource;
+use App\Http\Resources\CurrentUserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
@@ -18,13 +18,13 @@ use Illuminate\Support\Facades\Auth;
  */
 class AuthController extends Controller
 {
-    public function login(LoginRequest $request): UserResource
+    public function login(LoginRequest $request): CurrentUserResource
     {
         $user = $request->authenticate();
 
         $request->session()->regenerate();
 
-        return new UserResource($user);
+        return new CurrentUserResource($user);
     }
 
     public function logout(Request $request): Response
@@ -37,8 +37,8 @@ class AuthController extends Controller
         return response()->noContent();
     }
 
-    public function me(Request $request): UserResource
+    public function me(Request $request): CurrentUserResource
     {
-        return new UserResource($request->user());
+        return new CurrentUserResource($request->user());
     }
 }
