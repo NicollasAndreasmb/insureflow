@@ -84,6 +84,14 @@ export function formatPhone(value) {
     return value || '—';
 }
 
+export function formatCityState(city, state) {
+    if (!city) {
+        return state || '—';
+    }
+
+    return state ? `${city}/${state}` : city;
+}
+
 export function formatZipCode(value) {
     const digits = String(value ?? '').replace(/\D/g, '');
 

@@ -12,7 +12,7 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import { usePaginatedList } from '@/composables/usePaginatedList';
 import { useAuthStore } from '@/stores/auth';
 import { useOptionsStore } from '@/stores/options';
-import { formatDocument, formatNumber, formatPhone } from '@/utils/format';
+import { formatCityState, formatDocument, formatNumber, formatPhone } from '@/utils/format';
 
 const auth = useAuthStore();
 const options = useOptionsStore();
@@ -96,7 +96,7 @@ const columns = [
                 </template>
                 <template #cell-person_type="{ row }">{{ row.person_type.label }}</template>
                 <template #cell-location="{ row }">
-                    {{ row.city ? `${row.city}/${row.state ?? ''}` : '—' }}
+                    {{ formatCityState(row.city, row.state) }}
                 </template>
                 <template #cell-contact="{ row }">
                     <span class="block">{{ row.email ?? '—' }}</span>

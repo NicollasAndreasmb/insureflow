@@ -188,7 +188,7 @@ describe('PolicyDetailPage', () => {
         policiesApi.get.mockRejectedValue(new ApiError({ status: 404, message: 'Recurso não encontrado.' }));
         const { wrapper } = await mountPage(PolicyDetailPage, { props: { id: '999' }, routes });
 
-        expect(wrapper.find('[role="alert"]').text()).toContain('Recurso não encontrado.');
+        expect(wrapper.find('[role="alert"]').text()).toContain('Registro não encontrado');
         expect(wrapper.text()).not.toContain('Tentar novamente');
     });
 });

@@ -17,7 +17,7 @@ import { useAsyncData } from '@/composables/useAsyncData';
 import { useAuthStore } from '@/stores/auth';
 import { useConfirmStore } from '@/stores/confirm';
 import { useNotificationsStore } from '@/stores/notifications';
-import { formatDate, formatDocument, formatMoney, formatPhone, formatZipCode } from '@/utils/format';
+import { formatCityState, formatDate, formatDocument, formatMoney, formatPhone, formatZipCode } from '@/utils/format';
 
 const props = defineProps({
     id: { type: String, required: true },
@@ -49,7 +49,7 @@ const address = computed(() => {
     return [
         { key: 'street', label: 'Logradouro', value: street, wide: true },
         { key: 'district', label: 'Bairro', value: c.district },
-        { key: 'city', label: 'Cidade/UF', value: c.city ? `${c.city}/${c.state ?? ''}` : null },
+        { key: 'city', label: 'Cidade/UF', value: formatCityState(c.city, c.state) },
         { key: 'zip', label: 'CEP', value: c.zip_code ? formatZipCode(c.zip_code) : null },
     ];
 });
