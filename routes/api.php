@@ -17,6 +17,16 @@ use App\Http\Controllers\Api\PolicyStatusController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
+/*
+ * Identificadores são bigint no PostgreSQL: valores não numéricos ou maiores
+ * que o tipo suporta chegariam ao banco e causariam erro 500. Com o padrão,
+ * a rota simplesmente não casa e a resposta é 404.
+ */
+Route::patterns(array_fill_keys(
+    ['client', 'insurer', 'insurance_product', 'policy', 'coverage', 'installment', 'claim', 'user'],
+    '[0-9]{1,18}',
+));
+
 Route::get('/health', HealthCheckController::class)->name('api.health');
 
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login')->name('login');
