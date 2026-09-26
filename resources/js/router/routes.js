@@ -86,6 +86,21 @@ export const routes = [
 
             { path: 'installments', name: 'installments.index', component: () => import('@/pages/installments/InstallmentListPage.vue'), meta: { title: 'Parcelas' } },
 
+            { path: 'claims', name: 'claims.index', component: () => import('@/pages/claims/ClaimListPage.vue'), meta: { title: 'Sinistros' } },
+            {
+                path: 'claims/new',
+                name: 'claims.create',
+                component: () => import('@/pages/claims/ClaimFormPage.vue'),
+                meta: { title: 'Abrir sinistro', permission: 'claims.manage' },
+            },
+            {
+                path: 'claims/:id(\\d+)',
+                name: 'claims.show',
+                component: () => import('@/pages/claims/ClaimDetailPage.vue'),
+                props: true,
+                meta: { title: 'Sinistro' },
+            },
+
             { path: 'insurance-products', name: 'products.index', component: () => import('@/pages/products/ProductListPage.vue'), meta: { title: 'Modalidades' } },
 
             { path: 'forbidden', name: 'forbidden', component: () => import('@/pages/errors/ForbiddenPage.vue'), meta: { title: 'Acesso negado' } },
