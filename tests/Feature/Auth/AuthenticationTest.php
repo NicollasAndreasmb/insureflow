@@ -24,6 +24,15 @@ class AuthenticationTest extends TestCase
         $this->assertAuthenticatedAs($user, 'web');
     }
 
+    public function test_email_is_case_insensitive_on_login(): void
+    {
+        $user = User::factory()->create(['email' => 'ana@insureflow.test']);
+
+        $this->postJson('/api/login', ['email' => '  Ana@InsureFlow.TEST ', 'password' => 'password'])->assertOk();
+
+        $this->assertAuthenticatedAs($user, 'web');
+    }
+
     public function test_session_cookie_is_http_only(): void
     {
         User::factory()->create(['email' => 'ana@insureflow.test']);

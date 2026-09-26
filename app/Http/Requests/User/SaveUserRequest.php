@@ -27,6 +27,17 @@ class SaveUserRequest extends FormRequest
             : $this->user()->can('create', User::class);
     }
 
+    /**
+     * E-mails são gravados em minúsculas: a comparação do PostgreSQL diferencia
+     * maiúsculas, e sem isso "Ana@x" e "ana@x" seriam contas distintas.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('email'))) {
+            $this->merge(['email' => mb_strtolower(trim($this->input('email')))]);
+        }
+    }
+
     public function rules(): array
     {
         $user = $this->editedUser();

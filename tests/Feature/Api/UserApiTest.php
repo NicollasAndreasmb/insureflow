@@ -51,6 +51,20 @@ class UserApiTest extends TestCase
             ->assertJsonValidationErrors(['name', 'email', 'password', 'role']);
     }
 
+    public function test_emails_are_stored_lowercase_and_unique_regardless_of_case(): void
+    {
+        $this->actingAsRole(UserRole::Admin);
+        User::factory()->create(['email' => 'paula@insureflow.test']);
+
+        $this->postJson('/api/users', ['name' => 'Paula', 'email' => 'Paula@InsureFlow.test', 'password' => 'senhaSegura123', 'role' => 'broker'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('email');
+
+        $this->postJson('/api/users', ['name' => 'Rita', 'email' => 'Rita@InsureFlow.test', 'password' => 'senhaSegura123', 'role' => 'broker'])
+            ->assertCreated()
+            ->assertJsonPath('data.email', 'rita@insureflow.test');
+    }
+
     public function test_admin_cannot_lock_themselves_out(): void
     {
         $admin = $this->actingAsRole(UserRole::Admin);
