@@ -5,6 +5,7 @@ namespace Tests\Feature\Database;
 use App\Enums\PolicyStatus;
 use App\Enums\UserRole;
 use App\Models\Claim;
+use App\Models\Client;
 use App\Models\Installment;
 use App\Models\Policy;
 use App\Models\User;
@@ -45,6 +46,13 @@ class DatabaseSeederTest extends TestCase
 
         $this->assertGreaterThan(0, Policy::expiringWithin(30)->count());
         $this->assertGreaterThan(0, Installment::overdue()->count());
+
+        $invalidPhones = Client::query()
+            ->where(fn ($query) => $query
+                ->whereRaw("mobile !~ '^[0-9]{10,11}$'")
+                ->orWhereRaw("phone !~ '^[0-9]{10,11}$'"))
+            ->count();
+        $this->assertSame(0, $invalidPhones, 'Seeded phones must satisfy the API validation (DDD + number).');
 
         Claim::with('statusHistory')->get()->each(function (Claim $claim) {
             $this->assertSame($claim->status, $claim->statusHistory->last()->to_status, "Claim {$claim->protocol}");
