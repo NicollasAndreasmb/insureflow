@@ -68,7 +68,7 @@ describe('ActivityLogPage', () => {
 
         expect(activityLogsApi.list).toHaveBeenCalledWith(expect.objectContaining({ subject_type: 'policy', sort: '-created_at' }), expect.anything());
         expect(wrapper.text()).toContain('Apólice #7');
-        expect(wrapper.text()).toContain('prêmio');
+        expect(wrapper.text()).toContain('Prêmio');
         expect(wrapper.find('a[href="/policies/7"]').exists()).toBe(true);
         expect(router.currentRoute.value.query.subject_type).toBe('policy');
     });
