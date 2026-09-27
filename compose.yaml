@@ -67,6 +67,7 @@ services:
         command: ["sh", "-c", "npm install && npm run dev"]
         environment:
             VITE_USE_POLLING: ${VITE_USE_POLLING:-true}
+            VITE_PORT: ${VITE_PORT:-5173}
         ports:
             - "${VITE_PORT:-5173}:5173"
         volumes:
