@@ -45,7 +45,9 @@ qualquer status não final ──> cancelada
   emitida pela seguradora). Os demais status só são alcançados por transição.
 - Cancelada e expirada são estados finais. Uma renovação é uma nova apólice.
 - Para ficar ativa, a vigência não pode ter terminado. Para expirar, precisa ter
-  terminado.
+  terminado (`Policy::termAllows()`). As transições oferecidas pela API
+  (`allowed_transitions`) já combinam as duas condições: uma apólice ativa só
+  mostra "expirar" depois do fim da vigência.
 - Apólices em estado final só aceitam alteração de observações. Somente cotações
   podem ser excluídas; as demais são canceladas.
 
@@ -131,6 +133,6 @@ não altera apólices já expiradas. Cada expiração é auditada com usuário n
 | Parcela paga ⇔ data de pagamento; aprovado ⇒ valor; negado ⇒ sem valor | CHECK constraints |
 | Unicidade de documento, e-mail e número da apólice (por seguradora) | Índices únicos parciais que ignoram registros excluídos |
 | Históricos imutáveis | Trigger `prevent_row_update()` + trait `AppendOnly` |
-| Transições de status | Enums (`allowedTransitions`) + Services |
+| Transições de status | Enums (`allowedTransitions`) + `Policy::termAllows()` (vigência) + Services |
 | Datas relativas ao status, elegibilidade de sinistro, parcelas | `PolicyService`, `ClaimService` |
 | Soma das parcelas = prêmio | `InstallmentSchedule` (não expressável em CHECK) + teste de integridade |

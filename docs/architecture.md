@@ -37,7 +37,7 @@ Requisição → middleware (auth:sanctum, active, throttle)
 | Policies | `app/Policies` | Uma matriz de perfis (quem pode). Regras que dependem do estado do registro (quando pode) ficam nos Services. |
 | Services | `app/Services` | Só onde há regra: `PolicyService` (ciclo de vida, parcelas, expiração), `ClaimService` (elegibilidade, protocolo, histórico), `DashboardService` (agregações). CRUDs simples usam o model direto. |
 | Enums | `app/Enums` | Status, transições permitidas e rótulos em português. São a fonte da máquina de estados. |
-| Models | `app/Models` | Relacionamentos, scopes de filtro e predicados (`isEditable`, `isPayable`...) usados tanto pelos Services quanto pelos Resources. |
+| Models | `app/Models` | Relacionamentos, scopes de filtro e predicados (`isEditable`, `isPayable`, `termAllows`, `availableTransitions`...) usados tanto pelos Services quanto pelos Resources. |
 | Resources | `app/Http/Resources` | Formato das respostas; expõem o que pode ser feito com cada registro. |
 | Exceções | `app/Exceptions` | `BusinessRuleException` vira 422 no formato de validação; `ApiExceptionRenderer` padroniza todos os erros em português, sem detalhes internos. |
 | Auditoria | `app/Models/Concerns/HasActivityLog.php` | Grava `activity_logs` pelos eventos dos models: ninguém precisa lembrar de chamar. |
@@ -175,3 +175,14 @@ O ambiente Docker deste repositório é de **desenvolvimento**. Para publicar:
 - **Sem testes end-to-end automatizados** no navegador: os fluxos foram validados
   manualmente, e a integração é coberta por testes de API (PHPUnit) e de componentes
   com a API simulada (Vitest).
+- **Acessibilidade e responsividade verificadas manualmente**: não há ferramenta
+  automatizada (como axe) no projeto, e o layout móvel foi validado com viewport de
+  390 px no navegador, não em aparelhos reais.
+- **Latência no Docker Desktop (Windows)**: respostas típicas de ~0,2 s, com picos
+  de até ~1,7 s quando o opcache revalida arquivos no bind mount. Clonar o projeto
+  dentro do WSL2 resolve.
+- **Scheduler num clone novo**: até o `composer install` terminar, o container
+  `scheduler` reinicia em loop (não há `vendor/`). É inofensivo, mas polui o log.
+- **Auditoria dos dados de demonstração**: os seeders rodam sem eventos de model,
+  então os registros de exemplo não têm histórico de auditoria. A trilha passa a
+  existir a partir das operações feitas pela interface ou pela API.
