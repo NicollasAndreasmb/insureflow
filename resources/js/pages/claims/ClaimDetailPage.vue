@@ -27,6 +27,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useConfirmStore } from '@/stores/confirm';
 import { useNotificationsStore } from '@/stores/notifications';
 import { formatDate, formatMoney } from '@/utils/format';
+import { maxLength, money, required } from '@/utils/validation';
 
 const props = defineProps({
     id: { type: String, required: true },
@@ -42,7 +43,10 @@ const { data: claim, loading, error, reload } = useAsyncData((id) => claimsApi.g
 const nextStatus = ref(null);
 const editOpen = ref(false);
 const deleting = ref(false);
-const editForm = useForm({ description: '', estimated_amount: '', notes: '' });
+const editForm = useForm(
+    { description: '', estimated_amount: '', notes: '' },
+    { rules: { description: [required(), maxLength(5000)], estimated_amount: [required(), money()], notes: [maxLength(5000)] } },
+);
 
 const details = computed(() => {
     const c = claim.value;

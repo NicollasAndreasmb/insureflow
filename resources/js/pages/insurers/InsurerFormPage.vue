@@ -16,6 +16,7 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import { useForm } from '@/composables/useForm';
 import { useNotificationsStore } from '@/stores/notifications';
 import { useOptionsStore } from '@/stores/options';
+import { addressRules, cnpj, digitsBetween, email, maxLength, required, url } from '@/utils/validation';
 
 const props = defineProps({
     id: { type: String, default: null },
@@ -43,7 +44,18 @@ const EMPTY = {
     is_active: true,
 };
 
-const form = useForm(EMPTY);
+const form = useForm(EMPTY, {
+    rules: {
+        legal_name: [required(), maxLength(200)],
+        trade_name: [required(), maxLength(150)],
+        cnpj: [required(), cnpj()],
+        phone: [digitsBetween(10, 11)],
+        email: [email(), maxLength(255)],
+        website: [url(), maxLength(255)],
+        notes: [maxLength(5000)],
+        ...addressRules(),
+    },
+});
 const loading = ref(Boolean(props.id));
 const loadError = ref(null);
 const isEditing = computed(() => Boolean(props.id));

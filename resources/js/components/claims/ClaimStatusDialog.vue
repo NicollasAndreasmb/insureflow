@@ -14,6 +14,7 @@ import AppButton from '../ui/AppButton.vue';
 import AppModal from '../ui/AppModal.vue';
 import { useForm } from '@/composables/useForm';
 import { useNotificationsStore } from '@/stores/notifications';
+import { maxLength, money, required } from '@/utils/validation';
 
 const props = defineProps({
     claim: { type: Object, required: true },
@@ -23,8 +24,11 @@ const props = defineProps({
 const emit = defineEmits(['close', 'changed']);
 
 const notifications = useNotificationsStore();
-const form = useForm({ approved_amount: '', notes: '' });
 const requiresAmount = computed(() => props.status?.value === 'approved');
+const form = useForm(
+    { approved_amount: '', notes: '' },
+    { rules: () => ({ approved_amount: requiresAmount.value ? [required(), money()] : [], notes: [maxLength(2000)] }) },
+);
 
 watch(
     () => props.status,

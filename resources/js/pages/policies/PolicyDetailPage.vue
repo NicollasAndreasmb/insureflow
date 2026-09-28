@@ -34,6 +34,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useConfirmStore } from '@/stores/confirm';
 import { useNotificationsStore } from '@/stores/notifications';
 import { formatDate, formatMoney, formatPercent } from '@/utils/format';
+import { maxLength } from '@/utils/validation';
 
 const props = defineProps({
     id: { type: String, required: true },
@@ -50,7 +51,7 @@ const history = ref(null);
 const payingInstallment = ref(null);
 const deleting = ref(false);
 const notesOpen = ref(false);
-const notesForm = useForm({ notes: '' });
+const notesForm = useForm({ notes: '' }, { rules: { notes: [maxLength(5000)] } });
 
 async function refresh() {
     await reload();

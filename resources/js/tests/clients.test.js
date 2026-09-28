@@ -82,11 +82,11 @@ describe('ClientFormPage', () => {
 
         await wrapper.find('input[type="text"]').setValue('Maria Souza');
         const documentInput = wrapper.findAll('input[inputmode="numeric"]')[0];
-        await documentInput.setValue('529.982.247-24');
+        await documentInput.setValue('529.982.247-25');
         await wrapper.find('form').trigger('submit');
         await flushPromises();
 
-        expect(clientsApi.create).toHaveBeenCalledWith(expect.objectContaining({ name: 'Maria Souza', document: '52998224724', email: null }));
+        expect(clientsApi.create).toHaveBeenCalledWith(expect.objectContaining({ name: 'Maria Souza', document: '52998224725', email: null }));
         expect(wrapper.text()).toContain('O CPF informado é inválido.');
         expect(documentInput.attributes('aria-invalid')).toBe('true');
         expect(wrapper.find('[role="alert"]').text()).toContain('Os dados informados são inválidos.');
@@ -96,9 +96,24 @@ describe('ClientFormPage', () => {
         clientsApi.create.mockResolvedValue({ id: 42 });
         const { wrapper, router } = await mountPage(ClientFormPage, { route: '/clients/new', routes: clientRoutes });
 
+        await wrapper.find('input[type="text"]').setValue('Maria Souza');
+        await wrapper.findAll('input[inputmode="numeric"]')[0].setValue('529.982.247-25');
         await wrapper.find('form').trigger('submit');
         await flushPromises();
 
         expect(router.currentRoute.value.fullPath).toBe('/clients/42');
+    });
+
+    it('validates in the browser and does not call the API when fields are invalid', async () => {
+        const { wrapper } = await mountPage(ClientFormPage, { route: '/clients/new', routes: clientRoutes });
+
+        await wrapper.findAll('input[inputmode="numeric"]')[0].setValue('111.111.111-11');
+        await wrapper.find('form').trigger('submit');
+        await flushPromises();
+
+        expect(clientsApi.create).not.toHaveBeenCalled();
+        expect(wrapper.text()).toContain('Este campo é obrigatório.');
+        expect(wrapper.text()).toContain('Informe um CPF válido.');
+        expect(wrapper.find('[role="alert"]').text()).toContain('Corrija os campos destacados');
     });
 });

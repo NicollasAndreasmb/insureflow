@@ -7,11 +7,18 @@
  * `generalError` com a mensagem geral — que também cobre regras de negócio
  * sem campo associado. Outros erros (403, 500, rede) viram `generalError`.
  * Nenhum erro é descartado silenciosamente.
+ *
+ * `rules` (objeto ou função dos campos, para regras condicionais) valida no
+ * navegador antes do envio, com as regras de utils/validation.js: se houver
+ * erro, a requisição nem é feita e os erros aparecem no mesmo formato do 422.
  */
 import { reactive, ref } from 'vue';
 import { ApiError } from '@/api/http';
+import { validate } from '@/utils/validation';
 
-export function useForm(initialValues = {}) {
+export const CLIENT_VALIDATION_MESSAGE = 'Corrija os campos destacados antes de continuar.';
+
+export function useForm(initialValues = {}, { rules = null } = {}) {
     const fields = reactive({ ...initialValues });
     const errors = ref({});
     const generalError = ref('');
@@ -37,8 +44,20 @@ export function useForm(initialValues = {}) {
             return null;
         }
 
-        processing.value = true;
         clearErrors();
+
+        if (rules) {
+            const clientErrors = validate(fields, typeof rules === 'function' ? rules(fields) : rules);
+
+            if (Object.keys(clientErrors).length > 0) {
+                errors.value = clientErrors;
+                generalError.value = CLIENT_VALIDATION_MESSAGE;
+
+                return null;
+            }
+        }
+
+        processing.value = true;
 
         try {
             return await action({ ...fields });

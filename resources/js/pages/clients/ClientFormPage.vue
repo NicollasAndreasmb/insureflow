@@ -2,8 +2,8 @@
 /*
  * Cadastro e edição de clientes (a edição envia o registro completo via PUT).
  * CPF/CNPJ, telefones e CEP são digitados com máscara, mas enviados apenas
- * com dígitos; a validação de verdade (dígitos verificadores, unicidade) é do
- * backend, e seus erros aparecem em cada campo.
+ * com dígitos; os dígitos verificadores são conferidos também no navegador, mas a
+ * unicidade e a validação definitiva são do backend; os erros aparecem em cada campo.
  */
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -22,6 +22,7 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import { useForm } from '@/composables/useForm';
 import { useNotificationsStore } from '@/stores/notifications';
 import { useOptionsStore } from '@/stores/options';
+import { addressRules, cnpj, cpf, dateBeforeToday, digitsBetween, email, maxLength, required } from '@/utils/validation';
 
 const props = defineProps({
     id: { type: String, default: null },
@@ -50,7 +51,18 @@ const EMPTY = {
     is_active: true,
 };
 
-const form = useForm(EMPTY);
+const form = useForm(EMPTY, {
+    rules: (fields) => ({
+        name: [required(), maxLength(150)],
+        document: [required(), fields.person_type === 'company' ? cnpj() : cpf()],
+        email: [email(), maxLength(255)],
+        phone: [digitsBetween(10, 11)],
+        mobile: [digitsBetween(10, 11)],
+        birth_date: [dateBeforeToday()],
+        notes: [maxLength(5000)],
+        ...addressRules(),
+    }),
+});
 const loading = ref(Boolean(props.id));
 const loadError = ref(null);
 

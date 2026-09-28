@@ -18,6 +18,7 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import { useForm } from '@/composables/useForm';
 import { useNotificationsStore } from '@/stores/notifications';
 import { formatDate, todayIso } from '@/utils/format';
+import { dateNotAfterToday, dateNotBefore, maxLength, money, required } from '@/utils/validation';
 
 const route = useRoute();
 const router = useRouter();
@@ -30,6 +31,15 @@ const form = useForm({
     description: '',
     estimated_amount: '',
     notes: '',
+}, {
+    rules: {
+        policy_id: [required('Selecione a apólice.')],
+        occurred_on: [required(), dateNotAfterToday()],
+        reported_on: [dateNotAfterToday(), dateNotBefore('occurred_on', 'A comunicação não pode ser anterior à ocorrência.')],
+        description: [required(), maxLength(5000)],
+        estimated_amount: [required(), money()],
+        notes: [maxLength(5000)],
+    },
 });
 
 const selectedPolicy = ref(null);

@@ -78,12 +78,24 @@ describe('ClaimStatusDialog', () => {
         const { wrapper } = await mountPage(ClaimStatusDialog, { props: { claim: claim(), status: null } });
 
         await wrapper.setProps({ status: { value: 'approved', label: 'Aprovado' } });
-        await wrapper.find('input[inputmode="decimal"]').setValue('');
+        await wrapper.find('input[inputmode="decimal"]').setValue('1.500,00');
         await wrapper.find('form').trigger('submit');
         await flushPromises();
 
         expect(wrapper.text()).toContain('O campo valor aprovado é obrigatório.');
         expect(wrapper.emitted('changed')).toBeUndefined();
+    });
+
+    it('requires the approved amount before calling the API', async () => {
+        const { wrapper } = await mountPage(ClaimStatusDialog, { props: { claim: claim(), status: null } });
+
+        await wrapper.setProps({ status: { value: 'approved', label: 'Aprovado' } });
+        await wrapper.find('input[inputmode="decimal"]').setValue('');
+        await wrapper.find('form').trigger('submit');
+        await flushPromises();
+
+        expect(claimsApi.changeStatus).not.toHaveBeenCalled();
+        expect(wrapper.text()).toContain('Este campo é obrigatório.');
     });
 });
 

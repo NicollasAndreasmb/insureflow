@@ -13,6 +13,7 @@ import AppModal from '../ui/AppModal.vue';
 import { useForm } from '@/composables/useForm';
 import { useNotificationsStore } from '@/stores/notifications';
 import { formatDate, formatMoney, todayIso } from '@/utils/format';
+import { dateNotAfterToday, required } from '@/utils/validation';
 
 const props = defineProps({
     installment: { type: Object, default: null },
@@ -21,7 +22,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'paid']);
 
 const notifications = useNotificationsStore();
-const form = useForm({ paid_on: todayIso() });
+const form = useForm({ paid_on: todayIso() }, { rules: { paid_on: [required(), dateNotAfterToday()] } });
 
 watch(
     () => props.installment,

@@ -28,6 +28,7 @@ import { useConfirmStore } from '@/stores/confirm';
 import { useNotificationsStore } from '@/stores/notifications';
 import { useOptionsStore } from '@/stores/options';
 import { formatDate } from '@/utils/format';
+import { email, maxLength, password, required } from '@/utils/validation';
 
 const auth = useAuthStore();
 const options = useOptionsStore();
@@ -37,8 +38,14 @@ const notifications = useNotificationsStore();
 const list = usePaginatedList(usersApi.list, { filterKeys: ['search', 'role', 'is_active'], defaultSort: 'name' });
 
 const EMPTY = { name: '', email: '', password: '', role: 'broker', is_active: true };
-const form = useForm(EMPTY);
 const editing = ref(null);
+const form = useForm(EMPTY, {
+    rules: () => ({
+        name: [required(), maxLength(120)],
+        email: [required(), email(), maxLength(255)],
+        password: editing.value ? [password()] : [required(), password()],
+    }),
+});
 const modalOpen = ref(false);
 const deletingId = ref(null);
 const isSelf = computed(() => editing.value?.id === auth.user?.id);

@@ -34,6 +34,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useNotificationsStore } from '@/stores/notifications';
 import { useOptionsStore } from '@/stores/options';
 import { formatDocument } from '@/utils/format';
+import { dateAfter, integerBetween, maxLength, money, numberBetween, required } from '@/utils/validation';
 
 const props = defineProps({
     id: { type: String, default: null },
@@ -64,6 +65,21 @@ const form = useForm({
     status: 'quote',
     notes: '',
     coverages: [],
+}, {
+    rules: {
+        number: [required(), maxLength(50)],
+        client_id: [required('Selecione o cliente.')],
+        insurer_id: [required('Selecione a seguradora.')],
+        insurance_product_id: [required('Selecione a modalidade.')],
+        starts_on: [required()],
+        ends_on: [required(), dateAfter('starts_on', 'O fim da vigência deve ser posterior ao início.')],
+        premium: [required(), money()],
+        deductible: [money()],
+        commission_rate: [required(), numberBetween(0, 100)],
+        payment_method: [required('Selecione a forma de pagamento.')],
+        installments_count: [required(), integerBetween(1, 12)],
+        notes: [maxLength(5000)],
+    },
 });
 
 const policy = ref(null);

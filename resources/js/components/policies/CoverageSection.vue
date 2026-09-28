@@ -23,6 +23,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useConfirmStore } from '@/stores/confirm';
 import { useNotificationsStore } from '@/stores/notifications';
 import { formatMoney } from '@/utils/format';
+import { maxLength, money, required } from '@/utils/validation';
 
 const props = defineProps({
     policy: { type: Object, required: true },
@@ -35,7 +36,15 @@ const confirm = useConfirmStore();
 const notifications = useNotificationsStore();
 
 const EMPTY = { name: '', description: '', coverage_limit: '', deductible: '', additional_premium: '0.00', is_active: true };
-const form = useForm(EMPTY);
+const form = useForm(EMPTY, {
+    rules: {
+        name: [required(), maxLength(150)],
+        description: [maxLength(2000)],
+        coverage_limit: [required(), money()],
+        deductible: [money()],
+        additional_premium: [required(), money()],
+    },
+});
 const editing = ref(null);
 const modalOpen = ref(false);
 const deletingId = ref(null);

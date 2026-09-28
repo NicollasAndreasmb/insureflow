@@ -26,6 +26,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useConfirmStore } from '@/stores/confirm';
 import { useNotificationsStore } from '@/stores/notifications';
 import { formatNumber } from '@/utils/format';
+import { maxLength, required } from '@/utils/validation';
 
 const auth = useAuthStore();
 const confirm = useConfirmStore();
@@ -33,7 +34,10 @@ const notifications = useNotificationsStore();
 
 const list = usePaginatedList(productsApi.list, { filterKeys: ['search', 'is_active'], defaultSort: 'name' });
 
-const form = useForm({ name: '', description: '', is_active: true });
+const form = useForm(
+    { name: '', description: '', is_active: true },
+    { rules: { name: [required(), maxLength(100)], description: [maxLength(5000)] } },
+);
 const editing = ref(null);
 const modalOpen = ref(false);
 const deletingId = ref(null);
