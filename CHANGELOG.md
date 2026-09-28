@@ -3,6 +3,23 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/);
 o projeto segue [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [Não lançado]
+
+### Segurança
+
+Resultado da auditoria descrita em [docs/security.md](docs/security.md).
+
+- Portas do Docker (PostgreSQL, Vite e nginx) publicadas apenas em `127.0.0.1`.
+- Login limitado também por IP e por e-mail entre IPs; `/api/health` limitado por IP.
+- Política de senha: 10 a 72 caracteres, maiúsculas, minúsculas e números
+  (em produção, também recusa senhas vazadas).
+- "Manter conectado" limitado a 30 dias.
+- CORS restrito à origem da aplicação; sessão criptografada e cookie `secure`
+  automático com HTTPS.
+- Upload de arquivos desativado no PHP e corpo das requisições limitado a 1 MB.
+- `%` e `_` na busca tratados como texto, não como curingas.
+- Validação dos formulários também no navegador (espelhando os FormRequests).
+
 ## 1.0.0 - 2026-09-26
 
 Primeira versão pública.
