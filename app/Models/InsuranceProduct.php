@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\HasActivityLog;
 use App\Models\Concerns\HasPolicies;
+use App\Support\Like;
 use Database\Factories\InsuranceProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -33,7 +34,7 @@ class InsuranceProduct extends Model
     protected function filter(Builder $query, array $filters): void
     {
         $query
-            ->when($filters['search'] ?? null, fn (Builder $query, string $term) => $query->where('name', 'ilike', "%{$term}%"))
+            ->when($filters['search'] ?? null, fn (Builder $query, string $term) => $query->where('name', 'ilike', Like::contains($term)))
             ->when(isset($filters['is_active']), fn (Builder $query) => $query->where('is_active', filter_var($filters['is_active'], FILTER_VALIDATE_BOOLEAN)));
     }
 }

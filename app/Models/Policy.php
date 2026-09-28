@@ -6,6 +6,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\PolicyStatus;
 use App\Exceptions\BusinessRuleException;
 use App\Models\Concerns\HasActivityLog;
+use App\Support\Like;
 use Database\Factories\PolicyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Refreshes;
@@ -143,8 +144,8 @@ class Policy extends Model
         $query
             ->when($filters['search'] ?? null, fn (Builder $query, string $term) => $query->where(
                 fn (Builder $query) => $query
-                    ->where('number', 'ilike', "%{$term}%")
-                    ->orWhereHas('client', fn (Builder $query) => $query->where('name', 'ilike', "%{$term}%")),
+                    ->where('number', 'ilike', Like::contains($term))
+                    ->orWhereHas('client', fn (Builder $query) => $query->where('name', 'ilike', Like::contains($term))),
             ))
             ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status))
             ->when($filters['client_id'] ?? null, fn (Builder $query, int|string $id) => $query->where('client_id', $id))

@@ -110,6 +110,16 @@ class ClientApiTest extends TestCase
             ->assertJsonPath('errors.sort.0', 'O valor selecionado para ordenação é inválido.');
     }
 
+    public function test_search_treats_like_wildcards_as_literal_characters(): void
+    {
+        $this->actingAsRole(UserRole::Assistant);
+        Client::factory()->create(['name' => 'Ana Souza']);
+        Client::factory()->create(['name' => 'Loja 100% Seguros']);
+
+        $this->getJson('/api/clients?search=%25')->assertJsonCount(1, 'data')->assertJsonPath('data.0.name', 'Loja 100% Seguros');
+        $this->getJson('/api/clients?search=A_a')->assertJsonCount(0, 'data');
+    }
+
     public function test_shows_client_details_with_policies(): void
     {
         $this->actingAsRole(UserRole::Assistant);

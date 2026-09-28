@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\PersonType;
 use App\Models\Concerns\HasActivityLog;
 use App\Models\Concerns\HasPolicies;
+use App\Support\Like;
 use Database\Factories\ClientFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -55,12 +56,12 @@ class Client extends Model
                 $digits = preg_replace('/\D/', '', $term);
 
                 $query->where(fn (Builder $query) => $query
-                    ->whereAny(['name', 'email'], 'ilike', "%{$term}%")
+                    ->whereAny(['name', 'email'], 'ilike', Like::contains($term))
                     ->when($digits !== '', fn (Builder $query) => $query->orWhere('document', 'like', "%{$digits}%")));
             })
             ->when($filters['person_type'] ?? null, fn (Builder $query, string $type) => $query->where('person_type', $type))
             ->when(isset($filters['is_active']), fn (Builder $query) => $query->where('is_active', filter_var($filters['is_active'], FILTER_VALIDATE_BOOLEAN)))
             ->when($filters['state'] ?? null, fn (Builder $query, string $state) => $query->where('state', $state))
-            ->when($filters['city'] ?? null, fn (Builder $query, string $city) => $query->where('city', 'ilike', "%{$city}%"));
+            ->when($filters['city'] ?? null, fn (Builder $query, string $city) => $query->where('city', 'ilike', Like::contains($city)));
     }
 }

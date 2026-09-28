@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ClaimStatus;
 use App\Models\Concerns\HasActivityLog;
+use App\Support\Like;
 use Database\Factories\ClaimFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -72,10 +73,10 @@ class Claim extends Model
         $query
             ->when($filters['search'] ?? null, fn (Builder $query, string $term) => $query->where(
                 fn (Builder $query) => $query
-                    ->where('protocol', 'ilike', "%{$term}%")
+                    ->where('protocol', 'ilike', Like::contains($term))
                     ->orWhereHas('policy', fn (Builder $query) => $query
-                        ->where('number', 'ilike', "%{$term}%")
-                        ->orWhereHas('client', fn (Builder $query) => $query->where('name', 'ilike', "%{$term}%"))),
+                        ->where('number', 'ilike', Like::contains($term))
+                        ->orWhereHas('client', fn (Builder $query) => $query->where('name', 'ilike', Like::contains($term)))),
             ))
             ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status))
             ->when(filter_var($filters['open'] ?? false, FILTER_VALIDATE_BOOLEAN), fn (Builder $query) => $query->whereIn('status', ClaimStatus::nonFinal()))

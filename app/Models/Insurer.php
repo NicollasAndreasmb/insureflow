@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\HasActivityLog;
 use App\Models\Concerns\HasPolicies;
+use App\Support\Like;
 use Database\Factories\InsurerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -41,7 +42,7 @@ class Insurer extends Model
                 $digits = preg_replace('/\D/', '', $term);
 
                 $query->where(fn (Builder $query) => $query
-                    ->whereAny(['trade_name', 'legal_name'], 'ilike', "%{$term}%")
+                    ->whereAny(['trade_name', 'legal_name'], 'ilike', Like::contains($term))
                     ->when($digits !== '', fn (Builder $query) => $query->orWhere('cnpj', 'like', "%{$digits}%")));
             })
             ->when(isset($filters['is_active']), fn (Builder $query) => $query->where('is_active', filter_var($filters['is_active'], FILTER_VALIDATE_BOOLEAN)));

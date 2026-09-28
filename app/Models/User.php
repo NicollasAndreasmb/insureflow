@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\UserRole;
 use App\Models\Concerns\HasActivityLog;
+use App\Support\Like;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -61,7 +62,7 @@ class User extends Authenticatable
     protected function filter(Builder $query, array $filters): void
     {
         $query
-            ->when($filters['search'] ?? null, fn (Builder $query, string $term) => $query->whereAny(['name', 'email'], 'ilike', "%{$term}%"))
+            ->when($filters['search'] ?? null, fn (Builder $query, string $term) => $query->whereAny(['name', 'email'], 'ilike', Like::contains($term)))
             ->when($filters['role'] ?? null, fn (Builder $query, string $role) => $query->where('role', $role))
             ->when(isset($filters['is_active']), fn (Builder $query) => $query->where('is_active', filter_var($filters['is_active'], FILTER_VALIDATE_BOOLEAN)));
     }
