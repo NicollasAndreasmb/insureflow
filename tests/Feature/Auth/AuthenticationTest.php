@@ -101,6 +101,46 @@ class AuthenticationTest extends TestCase
             ->assertHeader('Retry-After');
     }
 
+    public function test_login_is_rate_limited_per_ip_across_emails(): void
+    {
+        foreach (range(1, 20) as $attempt) {
+            $this->postJson('/api/login', ['email' => "user{$attempt}@insureflow.test", 'password' => 'Password123'])
+                ->assertUnprocessable();
+        }
+
+        $this->postJson('/api/login', ['email' => 'another@insureflow.test', 'password' => 'Password123'])
+            ->assertTooManyRequests();
+    }
+
+    public function test_login_is_rate_limited_per_email_across_ips(): void
+    {
+        User::factory()->create(['email' => 'ana@insureflow.test']);
+
+        foreach (range(1, 30) as $attempt) {
+            $this->withServerVariables(['REMOTE_ADDR' => "10.0.0.{$attempt}"])
+                ->postJson('/api/login', ['email' => 'ana@insureflow.test', 'password' => 'wrong'])
+                ->assertUnprocessable();
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => '10.0.1.1'])
+            ->postJson('/api/login', ['email' => 'ana@insureflow.test', 'password' => 'password'])
+            ->assertTooManyRequests();
+    }
+
+    public function test_remember_me_cookie_does_not_outlive_thirty_days(): void
+    {
+        User::factory()->create(['email' => 'ana@insureflow.test']);
+
+        $response = $this->postJson('/api/login', ['email' => 'ana@insureflow.test', 'password' => 'password', 'remember' => true]);
+
+        $rememberCookie = collect($response->headers->getCookies())
+            ->first(fn ($cookie) => str_starts_with($cookie->getName(), 'remember_web_'));
+
+        $this->assertNotNull($rememberCookie);
+        $this->assertTrue($rememberCookie->isHttpOnly());
+        $this->assertLessThanOrEqual(now()->addDays(30)->addMinute()->getTimestamp(), $rememberCookie->getExpiresTime());
+    }
+
     public function test_authenticated_user_endpoint_returns_the_current_user(): void
     {
         $user = $this->actingAsRole(UserRole::Assistant);

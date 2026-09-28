@@ -19,7 +19,7 @@ class UserApiTest extends TestCase
         $id = $this->postJson('/api/users', [
             'name' => 'Paula Corretora',
             'email' => 'paula@insureflow.test',
-            'password' => 'senhaSegura123',
+            'password' => 'SenhaSegura123',
             'role' => 'broker',
         ])
             ->assertCreated()
@@ -27,13 +27,13 @@ class UserApiTest extends TestCase
             ->assertJsonMissingPath('data.password')
             ->json('data.id');
 
-        $this->assertTrue(Hash::check('senhaSegura123', User::find($id)->password));
+        $this->assertTrue(Hash::check('SenhaSegura123', User::find($id)->password));
 
         $this->putJson("/api/users/{$id}", ['name' => 'Paula Lima', 'email' => 'paula@insureflow.test', 'role' => 'assistant', 'is_active' => false])
             ->assertOk()
             ->assertJsonPath('data.is_active', false);
 
-        $this->assertTrue(Hash::check('senhaSegura123', User::find($id)->password), 'password kept when omitted');
+        $this->assertTrue(Hash::check('SenhaSegura123', User::find($id)->password), 'password kept when omitted');
 
         $this->getJson('/api/users?role=assistant')->assertOk()->assertJsonCount(1, 'data');
 
@@ -51,16 +51,26 @@ class UserApiTest extends TestCase
             ->assertJsonValidationErrors(['name', 'email', 'password', 'role']);
     }
 
+    public function test_password_must_follow_the_password_policy(): void
+    {
+        $this->actingAsRole(UserRole::Admin);
+
+        foreach (['Curta123', 'semmaiuscula123', 'SemNumeroAlgum', str_repeat('Aa1', 25)] as $password) {
+            $this->postJson('/api/users', ['name' => 'Paula', 'email' => 'paula@insureflow.test', 'password' => $password, 'role' => 'broker'])
+                ->assertJsonValidationErrors(['password']);
+        }
+    }
+
     public function test_emails_are_stored_lowercase_and_unique_regardless_of_case(): void
     {
         $this->actingAsRole(UserRole::Admin);
         User::factory()->create(['email' => 'paula@insureflow.test']);
 
-        $this->postJson('/api/users', ['name' => 'Paula', 'email' => 'Paula@InsureFlow.test', 'password' => 'senhaSegura123', 'role' => 'broker'])
+        $this->postJson('/api/users', ['name' => 'Paula', 'email' => 'Paula@InsureFlow.test', 'password' => 'SenhaSegura123', 'role' => 'broker'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('email');
 
-        $this->postJson('/api/users', ['name' => 'Rita', 'email' => 'Rita@InsureFlow.test', 'password' => 'senhaSegura123', 'role' => 'broker'])
+        $this->postJson('/api/users', ['name' => 'Rita', 'email' => 'Rita@InsureFlow.test', 'password' => 'SenhaSegura123', 'role' => 'broker'])
             ->assertCreated()
             ->assertJsonPath('data.email', 'rita@insureflow.test');
     }

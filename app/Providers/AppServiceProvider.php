@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -33,10 +34,15 @@ class AppServiceProvider extends ServiceProvider
      * O modo estrito fora de produção expõe cedo lazy loading (N+1), atributos
      * não carregados e mass assignment silenciosamente descartado.
      *
-     * O limite de login é por e-mail + IP, para dificultar força bruta sem
-     * bloquear outros usuários atrás do mesmo IP (ex.: rede do escritório).
-     * As rotas autenticadas têm um limite por usuário folgado para o uso da
-     * interface, mas que impede varreduras em massa com uma sessão válida.
+     * O login tem três limites: por e-mail + IP (força bruta em uma conta sem
+     * bloquear colegas atrás do mesmo IP), por IP (um atacante testando uma
+     * senha comum em vários e-mails) e por e-mail em uma hora (tentativas
+     * distribuídas entre IPs). As rotas autenticadas têm um limite por usuário
+     * folgado para o uso da interface, mas que impede varreduras em massa com
+     * uma sessão válida; rotas públicas são limitadas por IP.
+     *
+     * A política de senha padrão vale para todo cadastro de senha; em produção
+     * ela também recusa senhas que aparecem em vazamentos conhecidos.
      */
     public function boot(): void
     {
@@ -53,10 +59,25 @@ class AppServiceProvider extends ServiceProvider
 
         Model::shouldBeStrict(! $this->app->isProduction());
 
-        RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)
-            ->by(Str::lower((string) $request->input('email')).'|'.$request->ip()));
+        RateLimiter::for('login', function (Request $request) {
+            $email = Str::lower(trim((string) $request->input('email')));
+
+            return [
+                Limit::perMinute(5)->by('email-ip|'.$email.'|'.$request->ip()),
+                Limit::perMinute(20)->by('ip|'.$request->ip()),
+                Limit::perHour(30)->by('email|'.$email),
+            ];
+        });
 
         RateLimiter::for('api', fn (Request $request) => Limit::perMinute(180)
             ->by($request->user()?->id ?: $request->ip()));
+
+        RateLimiter::for('public', fn (Request $request) => Limit::perMinute(60)->by($request->ip()));
+
+        Password::defaults(function () {
+            $rule = Password::min(10)->max(72)->letters()->mixedCase()->numbers();
+
+            return $this->app->isProduction() ? $rule->uncompromised() : $rule;
+        });
     }
 }

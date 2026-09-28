@@ -27,7 +27,7 @@ Route::patterns(array_fill_keys(
     '[0-9]{1,18}',
 ));
 
-Route::get('/health', HealthCheckController::class)->name('api.health');
+Route::get('/health', HealthCheckController::class)->middleware('throttle:public')->name('api.health');
 
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login')->name('login');
 

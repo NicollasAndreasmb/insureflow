@@ -45,7 +45,7 @@ class SaveUserRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->withoutTrashed()->ignore($user)],
-            'password' => [$user ? 'nullable' : 'required', 'string', Password::min(8)->letters()->numbers()],
+            'password' => [$user ? 'nullable' : 'required', 'string', Password::defaults()],
             'role' => ['required', Rule::enum(UserRole::class)],
             'is_active' => ['sometimes', 'boolean'],
         ];
