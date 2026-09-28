@@ -8,6 +8,10 @@
 #
 # Todas as credenciais vêm do arquivo .env (copiado de .env.example), que o
 # Compose lê automaticamente para interpolar as variáveis abaixo.
+#
+# As portas são publicadas apenas em 127.0.0.1 (FORWARD_BIND_ADDRESS): em
+# 0.0.0.0 o PostgreSQL, o Vite e a aplicação ficariam acessíveis a qualquer
+# máquina da rede local, com a senha de desenvolvimento conhecida.
 
 x-php: &php
     build:
@@ -34,7 +38,7 @@ services:
     web:
         image: nginx:1.27-alpine
         ports:
-            - "${APP_PORT:-8000}:80"
+            - "${FORWARD_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-8000}:80"
         volumes:
             - ./:/var/www/html:ro
             - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
@@ -49,7 +53,7 @@ services:
             POSTGRES_USER: ${DB_USERNAME:-insureflow}
             POSTGRES_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD no arquivo .env}
         ports:
-            - "${FORWARD_DB_PORT:-5433}:5432"
+            - "${FORWARD_BIND_ADDRESS:-127.0.0.1}:${FORWARD_DB_PORT:-5433}:5432"
         volumes:
             - postgres-data:/var/lib/postgresql/data
             - ./docker/postgres/create-test-database.sh:/docker-entrypoint-initdb.d/10-create-test-database.sh:ro
@@ -69,7 +73,7 @@ services:
             VITE_USE_POLLING: ${VITE_USE_POLLING:-true}
             VITE_PORT: ${VITE_PORT:-5173}
         ports:
-            - "${VITE_PORT:-5173}:5173"
+            - "${FORWARD_BIND_ADDRESS:-127.0.0.1}:${VITE_PORT:-5173}:5173"
         volumes:
             - ./:/var/www/html
             - node-modules:/var/www/html/node_modules
